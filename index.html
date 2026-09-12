@@ -1,149 +1,73 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#111827">
-  <title>My Football Scores</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <style>
-    :root{--bg:#0b1020;--panel:#141b2d;--text:#f5f7fb;--muted:#9aa6bd;--accent:#ffcc33;--live:#ff4d4d;--line:#2a3650}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-    .wrap{max-width:720px;margin:0 auto;padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom)}
-    header{padding:10px 2px 6px;position:sticky;top:0;background:rgba(11,16,32,.96);backdrop-filter:blur(10px);z-index:10}
-    h1{font-size:21px;margin:0 0 2px}.sub{font-size:11px;color:var(--muted)}
-    .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:9px 0 6px}
-    .tab{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:8px 5px;border-radius:9px;font-size:13px;font-weight:750}
-    .tab.active{background:var(--accent);color:#111;border-color:var(--accent)}
-    .toolbar{display:flex;gap:7px;align-items:center;justify-content:space-between;margin:5px 0}
-    .lefttools{display:flex;gap:7px;align-items:center;min-width:0}
-    select,.refresh{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:6px 8px;border-radius:8px;font-size:12px}
-    .refresh{background:transparent}.status{font-size:10px;color:var(--muted);white-space:nowrap}
-    .game{background:var(--panel);border:1px solid var(--line);border-radius:11px;margin:6px 0;padding:8px 9px}
-    .game.live{border-color:#713434}.topline{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;min-height:20px}
-    .state{font-size:11px;font-weight:800;letter-spacing:.25px}.state.live{color:var(--live)}
-    .star{font-size:21px;line-height:1;border:0;background:none;color:#7e8aa2;padding:0 2px}.star.on{color:var(--accent)}
-    .teamrow{display:grid;grid-template-columns:23px 1fr auto;gap:7px;align-items:center;padding:1px 0}
-    .logo{width:22px;height:22px;object-fit:contain}.team{font-size:15px;font-weight:750;line-height:1.15}
-    .record{font-size:10px;color:var(--muted);font-weight:500;margin-left:4px}.score{font-size:19px;font-weight:850;min-width:28px;text-align:right}
-    .possession{display:inline-block;margin-left:4px;color:var(--accent);font-size:12px}
-    .situation{margin-top:5px;padding-top:5px;border-top:1px solid var(--line);font-size:12px;font-weight:750}.redzone{color:#ff9d7a}
-    .lastplay{margin-top:2px;color:var(--muted);font-size:10.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .empty,.error{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;color:var(--muted);margin-top:9px;font-size:13px}
-    .error{color:#ffb4b4}footer{font-size:10px;color:var(--muted);text-align:center;padding:12px 8px 22px}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08111a">
+<title>Football Scoreboard</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{--bg:#08111a;--panel:#111c27;--panel2:#0d1720;--border:#263746;--text:#f7f9fb;--muted:#8fb0c9;--accent:#f2c94c;--good:#63e6a1;--bad:#ef5350;--deepbad:#8f2028;--deepgood:#168a52;--warn:#f2c94c}
+*{box-sizing:border-box}body{margin:0;background:#02070c;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;min-height:100vh}.app{max-width:760px;margin:0 auto;padding:env(safe-area-inset-top) 8px env(safe-area-inset-bottom);background:var(--bg);min-height:100vh}
+header{position:sticky;top:0;z-index:20;background:rgba(8,17,26,.97);backdrop-filter:blur(12px);padding-top:6px}.tabs{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid var(--border);border-radius:15px;overflow:hidden}.tab{padding:12px 6px;border:0;background:transparent;color:#9eb7ca;font-weight:850;font-size:14px}.tab.active{background:#1a2a3a;color:#fff}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:7px;margin:7px 1px}.tools{display:flex;gap:6px;min-width:0}.toolbar select,.miniBtn{border:1px solid var(--border);background:var(--panel);color:var(--text);padding:6px 8px;border-radius:8px;font-size:11px}.updated{font-size:10px;color:var(--muted);white-space:nowrap}.view{display:none}.view.active{display:block}.weekline{display:flex;justify-content:space-between;align-items:center;margin:8px 2px;color:var(--muted);font-size:11px}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:7px}.sum{border:1px solid var(--border);background:var(--panel);border-radius:11px;padding:7px;display:flex;gap:4px;align-items:baseline}.sum b{font-size:15px}.sum span{font-size:10px;color:var(--muted)}.sum .pos{color:var(--good)}.sum .neg{color:var(--bad)}
+.betfilterrow{display:flex;justify-content:space-between;gap:6px;margin:7px 0}.filters,.sportfilters{display:flex;gap:4px}.filter,.sport{border:1px solid var(--border);background:#111b25;color:#9eb7ca;border-radius:999px;padding:5px 8px;font-size:9px;font-weight:850}.filter.active,.sport.active{background:#24384b;color:#fff}
+.card,.game{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:11px;margin-bottom:8px}.card.live,.game.live{border-left:4px solid #567794;background:linear-gradient(90deg,#14212d,#111c27 42%)}.topline{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.title{font-weight:900;font-size:16px}.sub{font-size:11px;color:var(--muted);margin-top:2px}.pick{font-weight:900;font-size:15px;margin-top:8px}.money{font-size:12px;margin-top:6px}.scorelink{font-size:12px;color:#b8d4e8;margin-top:6px;text-decoration:underline;text-decoration-color:#35516a;text-underline-offset:3px;cursor:pointer}.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 8px;font-size:10px;font-weight:900;white-space:nowrap}.pill.live{background:#172632;border:1px solid #3b5368}.pill.upcoming{background:#d6dde4;color:#26303a}.pill.win{background:var(--good);color:#07140c}.pill.loss{background:#c94d4d;color:white}.health{display:inline-flex;gap:2px}.health i{display:block;width:8px;height:8px;border-radius:2px;background:#32404d;opacity:.72}.health.l1 i:nth-child(-n+1){background:#ef5350;opacity:1}.health.l2 i:nth-child(-n+2){background:#8f2028;opacity:1}.health.l3 i:nth-child(-n+3){background:#f2c94c;opacity:1}.health.l4 i:nth-child(-n+4){background:#168a52;opacity:1}.health.l5 i:nth-child(-n+5){background:#63e6a1;opacity:1}
+.manual{display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);gap:6px}.manual.open{display:flex}.manual button{flex:1;border:1px solid var(--border);border-radius:9px;background:var(--panel2);color:var(--text);padding:7px;font-size:11px;font-weight:800}.manual .mw{border-color:#236e4a}.manual .ml{border-color:#8f3030}.expand{margin-top:8px;border:1px solid var(--border);border-radius:10px;padding:8px;background:var(--panel2);font-size:11px;font-weight:850;cursor:pointer}.legs{display:none;margin-top:5px}.legs.open{display:block}.leg{display:grid;grid-template-columns:minmax(0,1fr) 92px;align-items:center;gap:8px;padding:8px 1px;border-top:1px solid var(--border)}.legname{font-size:12px;font-weight:750}.legsub{font-size:10px;color:var(--muted);margin-top:2px}.legstatus{text-align:center}.sectionhead{font-size:10px;color:var(--muted);font-weight:900;margin:10px 2px 5px;text-transform:uppercase;letter-spacing:.07em;cursor:pointer}
+.gamehead{display:flex;justify-content:space-between;align-items:center}.gamestate{font-size:10px;color:var(--muted);font-weight:850}.gamestate.live{color:var(--bad)}.icons{display:flex;align-items:center;gap:8px}.dollar{color:var(--good);font-weight:950;font-size:17px;cursor:pointer}.star{font-size:21px;border:0;background:none;color:#718092;padding:0}.star.on{color:var(--accent)}.teamrow{display:grid;grid-template-columns:22px 1fr auto;gap:7px;align-items:center;padding:2px 0}.logo{width:21px;height:21px;object-fit:contain}.team{font-size:14px;font-weight:800}.record{font-size:9px;color:var(--muted);margin-left:4px}.gamescore{font-size:18px;font-weight:900}.situation{margin-top:5px;padding-top:5px;border-top:1px solid var(--border);font-size:11px}.empty,.error{background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:13px;color:var(--muted);margin:8px 0;font-size:12px}.error{color:#ffb4b4}.closedwrap.collapsed{display:none}footer{text-align:center;color:var(--muted);font-size:9px;padding:12px 6px 20px}
+@media(max-width:570px){.summary{grid-template-columns:repeat(2,1fr)}.filter,.sport{padding:5px 6px;font-size:8px}.title{font-size:15px}}
+</style>
 </head>
-<body>
-<div class="wrap">
+<body><div class="app">
 <header>
-  <h1>My Football Scores</h1>
-  <div class="sub">Today's favorites stay saved on this device until the date changes.</div>
-  <div class="tabs">
-    <button class="tab" data-tab="favorites">★ My Games</button>
-    <button class="tab" data-tab="college">College</button>
-    <button class="tab" data-tab="nfl">NFL</button>
-  </div>
-  <div class="toolbar">
-    <div class="lefttools">
-      <select id="conference">
-        <option value="80">All FBS</option>
-        <option value="1">ACC</option>
-        <option value="4">Big 12</option>
-        <option value="5">Big Ten</option>
-        <option value="8">SEC</option>
-      </select>
-      <span class="status" id="status">Loading…</span>
-    </div>
-    <button class="refresh" id="refreshBtn">↻</button>
-  </div>
+<div class="tabs"><button class="tab active" data-tab="scoreboard">Scoreboard</button><button class="tab" data-tab="bets">Bets</button><button class="tab" data-tab="allgames">All Games</button></div>
+<div class="toolbar"><div class="tools"><select id="sportSel"><option value="college">College</option><option value="nfl">NFL</option></select><select id="conference"><option value="80">All FBS</option><option value="1">ACC</option><option value="4">Big 12</option><option value="5">Big Ten</option><option value="8">SEC</option></select></div><span class="updated" id="updated">Loading…</span><button class="miniBtn" id="refreshBtn">↻</button></div>
 </header>
-<main id="games"></main>
-<footer>Auto-refreshes every 30 seconds while open • build v3</footer>
+<main>
+<section id="scoreboard" class="view active"></section>
+<section id="bets" class="view"></section>
+<section id="allgames" class="view"></section>
+</main>
+<footer>ESPN scores refresh every 30 seconds • bet feed from GitHub • build v4</footer>
 </div>
 <script>
-const ESPN={
- college:"https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard",
- nfl:"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
-};
-let data={collegeAll:[],collegeView:[],nfl:[]};
-let currentTab=localStorage.getItem("football-tab-v3")||"favorites";
-let collegeGroup=localStorage.getItem("football-conference-v3")||"80";
-
-function ymd(){
- const d=new Date(); return d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
-}
-function loadFavs(){
- try{const x=JSON.parse(localStorage.getItem("football-daily-favorites-v3")||"{}");
-   if(x.date===ymd()&&Array.isArray(x.items)) return new Set(x.items);
- }catch(e){}
- return new Set();
-}
-let favorites=loadFavs();
-function saveFavs(){localStorage.setItem("football-daily-favorites-v3",JSON.stringify({date:ymd(),items:[...favorites]}));}
-
-const gamesEl=document.getElementById("games"), statusEl=document.getElementById("status"), confEl=document.getElementById("conference");
-confEl.value=collegeGroup;
-const comp=e=>e.competitions?.[0]||{};
-const rank=s=>s==="in"?0:s==="pre"?1:2;
-function sortEvents(a){return [...a].sort((x,y)=>rank(comp(x).status?.type?.state)-rank(comp(y).status?.type?.state)||new Date(x.date)-new Date(y.date));}
-
-function card(e,sport){
- const c=comp(e), st=c.status||e.status||{}, state=st.type?.state||"pre", detail=st.type?.shortDetail||st.type?.detail||"";
- const sit=c.situation||{}, poss=sit.possession, key=`${sport}:${e.id}`, fav=favorites.has(key);
- const teams=(c.competitors||[]).sort((a,b)=>(a.homeAway==="away"?0:1)-(b.homeAway==="away"?0:1)).map(t=>{
-   const tm=t.team||{}, rec=t.records?.[0]?.summary||"", ball=String(t.id||tm.id)===String(poss);
-   return `<div class="teamrow"><img class="logo" src="${tm.logo||""}" alt=""><div class="team">${tm.abbreviation||tm.shortDisplayName||tm.displayName||"Team"}${ball?'<span class="possession">🏈</span>':""}${rec?`<span class="record">${rec}</span>`:""}</div><div class="score">${state==="pre"?"":(t.score??"")}</div></div>`;
- }).join("");
- let head=detail, cls="";
- if(state==="in"){head="● LIVE  "+detail;cls="live"} else if(state==="post") head=detail||"Final";
- let extra="";
- if(state==="in"){
-   const dd=sit.shortDownDistanceText||sit.downDistanceText||"", pt=sit.possessionText||"", red=sit.isRedZone?" redzone":"";
-   if(dd||pt) extra=`<div class="situation${red}">${dd}${pt&&!dd.includes(pt)?" • "+pt:""}</div>`;
-   if(sit.lastPlay?.text) extra+=`<div class="lastplay">Last: ${sit.lastPlay.text}</div>`;
- }
- return `<section class="game ${state==="in"?"live":""}"><div class="topline"><div class="state ${cls}">${head}</div><button class="star ${fav?"on":""}" data-key="${key}">${fav?"★":"☆"}</button></div>${teams}${extra}</section>`;
-}
-
-function render(){
- document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===currentTab));
- localStorage.setItem("football-tab-v3",currentTab);
- confEl.style.display=currentTab==="college"?"":"none";
- let list=[];
- if(currentTab==="favorites"){
-   list=[...data.collegeAll.map(e=>({e,s:"college"})),...data.nfl.map(e=>({e,s:"nfl"}))]
-     .filter(x=>favorites.has(`${x.s}:${x.e.id}`))
-     .sort((a,b)=>rank(comp(a.e).status?.type?.state)-rank(comp(b.e).status?.type?.state)||new Date(a.e.date)-new Date(b.e.date));
- }else if(currentTab==="college"){list=sortEvents(data.collegeView).map(e=>({e,s:"college"}));}
- else{list=sortEvents(data.nfl).map(e=>({e,s:"nfl"}));}
- gamesEl.innerHTML=list.length?list.map(x=>card(x.e,x.s)).join(""):`<div class="empty">${currentTab==="favorites"?"No games starred yet.":"No games found for this selection today."}</div>`;
- document.querySelectorAll(".star").forEach(b=>b.onclick=()=>{favorites.has(b.dataset.key)?favorites.delete(b.dataset.key):favorites.add(b.dataset.key);saveFavs();render();});
-}
-
-async function fetchBoard(sport,group){
- let url=`${ESPN[sport]}?dates=${ymd()}&limit=300`;
- if(sport==="college"&&group) url+=`&groups=${group}`;
- const r=await fetch(url,{cache:"no-store"}); if(!r.ok) throw new Error(`${sport} HTTP ${r.status}`);
- return (await r.json()).events||[];
-}
-async function refresh(){
- statusEl.textContent="Refreshing…";
- try{
-   const collegeAllP=fetchBoard("college","80");
-   const collegeViewP=collegeGroup==="80"?collegeAllP:fetchBoard("college",collegeGroup);
-   const [collegeAll,collegeView,nfl]=await Promise.all([collegeAllP,collegeViewP,fetchBoard("nfl")]);
-   data={collegeAll,collegeView,nfl};
-   statusEl.textContent="Updated "+new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
-   render();
- }catch(e){statusEl.textContent="ESPN error";gamesEl.innerHTML=`<div class="error">${String(e.message||e)}</div>`;}
-}
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{currentTab=b.dataset.tab;render();});
-confEl.onchange=()=>{collegeGroup=confEl.value;localStorage.setItem("football-conference-v3",collegeGroup);refresh();};
-document.getElementById("refreshBtn").onclick=refresh;
-document.addEventListener("visibilitychange",()=>{if(!document.hidden){favorites=loadFavs();refresh();}});
-if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").catch(()=>{});}
-refresh(); setInterval(()=>{if(!document.hidden)refresh();},30000);
-</script>
-</body>
-</html>
+const ESPN={college:'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard',nfl:'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard'};
+const BET_URL='https://raw.githubusercontent.com/jporter0705/football-score-data/main/current-week.json';
+let state={collegeAll:[],collegeView:[],nfl:[],bets:[],week:null,lastUpdate:null};
+let tab=localStorage.getItem('football-v4-tab')||'scoreboard';
+let sport=localStorage.getItem('football-v4-sport')||'college';
+let group=localStorage.getItem('football-v4-group')||'80';
+let betFilter='all',sportFilter='all';
+const aliases={'cal':'california','california golden bears':'california','usf':'south florida','south florida bulls':'south florida','sam houston st':'sam houston','sam houston state':'sam houston','oklahoma st':'oklahoma state','oregon st':'oregon state','mississippi st':'mississippi state','jacksonville st':'jacksonville state','texas a&m aggies':'texas a&m'};
+function norm(s){let x=(s||'').toLowerCase().replace(/[^a-z0-9& ]/g,' ').replace(/\s+/g,' ').trim();return aliases[x]||x.replace(/ university$/,'').replace(/ (bulldogs|tigers|bears|aggies|cowboys|ducks|wildcats|cardinal|orange|boilermakers|hokies|fighting irish|cyclones|hawkeyes|yellow jackets|green wave|broncos|black knights)$/,'');}
+function ymd(){const d=new Date();return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')}
+function favKey(sp,e){return sp+':'+e.id}function loadFavs(){try{let x=JSON.parse(localStorage.getItem('football-v4-favs')||'[]');return new Set(x)}catch(e){return new Set()}}let favs=loadFavs();function saveFavs(){localStorage.setItem('football-v4-favs',JSON.stringify([...favs]))}
+function overrides(){try{return JSON.parse(localStorage.getItem('football-v4-overrides')||'{}')}catch(e){return {}}}function setOverride(id,val){let o=overrides();if(val==='auto')delete o[id];else o[id]=val;localStorage.setItem('football-v4-overrides',JSON.stringify(o));renderBets();}
+const comp=e=>e?.competitions?.[0]||{};const gameState=e=>comp(e).status?.type?.state||'pre';
+function teamsFor(e){let cs=comp(e).competitors||[],away=cs.find(x=>x.homeAway==='away'),home=cs.find(x=>x.homeAway==='home');return {away,home,awayName:away?.team?.displayName||away?.team?.shortDisplayName||'',homeName:home?.team?.displayName||home?.team?.shortDisplayName||''}}
+function findGame(b){let pool=b.sport==='NFL'?state.nfl:state.collegeAll;if(b.espnEventId){let g=pool.find(e=>String(e.id)===String(b.espnEventId));if(g)return g}let a=norm(b.awayTeam),h=norm(b.homeTeam);return pool.find(e=>{let t=teamsFor(e);return norm(t.awayName)===a&&norm(t.homeName)===h})||null}
+function betsForGame(e,sp){let t=teamsFor(e),a=norm(t.awayName),h=norm(t.homeName);return state.bets.filter(b=>(sp==='nfl'?b.sport==='NFL':b.sport!=='NFL')&&((b.espnEventId&&String(b.espnEventId)===String(e.id))||(norm(b.awayTeam)===a&&norm(b.homeTeam)===h)))}
+function fmtLine(b){if(b.market==='total'||b.market==='first_half_total')return `${b.selection||''} ${b.line??''}`.trim();if(b.market==='spread')return `${b.selection||''} ${Number(b.line)>0?'+':''}${b.line??''}`.trim();return b.selection||b.description||b.structure?.replaceAll('_',' ')||'Wager'}
+function fmtMoney(b){let r=b.risk!=null?`$${Number(b.risk).toFixed(b.risk%1?2:0)}`:'';let w=b.toWin!=null?`$${Number(b.toWin).toFixed(2)}`:'';return r&&w?`${r} → ${w}`:r||w}
+function derivedResult(b,g){let ov=overrides()[b.betId];if(ov)return ov;let bo=(b.betOnlineStatus||'').toUpperCase();if(bo==='WON')return'won';if(bo==='LOST')return'lost';if(!g||gameState(g)!=='post')return null;let t=teamsFor(g),as=Number(t.away?.score),hs=Number(t.home?.score);if(!Number.isFinite(as)||!Number.isFinite(hs))return null;if(b.market==='spread'){let pickAway=norm(b.selection)===norm(b.awayTeam),pick=pickAway?as:hs,opp=pickAway?hs:as;let v=pick+Number(b.line||0)-opp;return v>0?'won':v<0?'lost':'push'}if(b.market==='total'){let v=as+hs-Number(b.line);let under=(b.selection||'').toLowerCase().includes('under');return under?(v<0?'won':v>0?'lost':'push'):(v>0?'won':v<0?'lost':'push')}return null}
+function healthLevel(b,g){if(!g||gameState(g)!=='in')return 3;let t=teamsFor(g),as=Number(t.away?.score||0),hs=Number(t.home?.score||0),period=comp(g).status?.period||1,clock=comp(g).status?.displayClock||'15:00',m=clock.match(/(\d+):(\d+)/),remain=m?(Number(m[1])+Number(m[2])/60):0,elapsed=Math.max(1,(period-1)*15+(15-remain)),frac=Math.min(.98,elapsed/60);if(b.market==='spread'){let pickAway=norm(b.selection)===norm(b.awayTeam),margin=(pickAway?as-hs:hs-as)+Number(b.line||0);let est=margin/Math.sqrt(Math.max(.2,1-frac));return est>12?5:est>5?4:est>-3?3:est>-10?2:1}if(b.market==='total'){let pace=(as+hs)/frac,edge=(b.selection||'').toLowerCase().includes('under')?Number(b.line)-pace:pace-Number(b.line);return edge>14?5:edge>6?4:edge>-5?3:edge>-12?2:1}return 3}
+function health(n){return `<span class="health l${n}"><i></i><i></i><i></i><i></i><i></i></span>`}
+function gameDetail(e){let st=comp(e).status||e.status||{},s=st.type?.state||'pre',d=st.type?.shortDetail||st.type?.detail||'';return s==='in'?`LIVE · ${d}`:s==='post'?(d||'Final'):d}
+function gameCard(e,sp){let t=teamsFor(e),s=gameState(e),key=favKey(sp,e),linked=betsForGame(e,sp).length>0,sit=comp(e).situation||{},poss=String(sit.possession||'');function row(x){let tm=x?.team||{},ball=String(x?.id||tm.id)===poss;return `<div class="teamrow"><img class="logo" src="${tm.logo||''}" alt=""><div class="team">${tm.abbreviation||tm.shortDisplayName||tm.displayName||'Team'}${ball?' 🏈':''}<span class="record">${x?.records?.[0]?.summary||''}</span></div><div class="gamescore">${s==='pre'?'':(x?.score??'')}</div></div>`}let extra=s==='in'&&sit.shortDownDistanceText?`<div class="situation">${sit.shortDownDistanceText}${sit.possessionText?' • '+sit.possessionText:''}</div>`:'';return `<div class="game ${s==='in'?'live':''}" id="game-${sp}-${e.id}"><div class="gamehead"><span class="gamestate ${s==='in'?'live':''}">${gameDetail(e)}</span><span class="icons">${linked?`<span class="dollar" data-game="${sp}:${e.id}">$</span>`:''}<button class="star ${favs.has(key)?'on':''}" data-key="${key}">${favs.has(key)?'★':'☆'}</button></span></div>${row(t.away)}${row(t.home)}${extra}</div>`}
+function attachStars(){document.querySelectorAll('.star').forEach(b=>b.onclick=()=>{favs.has(b.dataset.key)?favs.delete(b.dataset.key):favs.add(b.dataset.key);saveFavs();renderAll()});document.querySelectorAll('.dollar').forEach(d=>d.onclick=()=>{tab='bets';renderTabs()})}
+function renderScoreboard(){let items=[...state.collegeAll.map(e=>({e,sp:'college'})),...state.nfl.map(e=>({e,sp:'nfl'}))].filter(x=>favs.has(favKey(x.sp,x.e))||betsForGame(x.e,x.sp).length).sort((a,b)=>({in:0,pre:1,post:2}[gameState(a.e)]-({in:0,pre:1,post:2}[gameState(b.e)])||new Date(a.e.date)-new Date(b.e.date));document.getElementById('scoreboard').innerHTML=`<div class="weekline"><strong>Tracked Games</strong><span>$ bet-linked · ★ starred</span></div>`+(items.length?items.map(x=>gameCard(x.e,x.sp)).join(''):'<div class="empty">No tracked games yet.</div>');attachStars()}
+function resultPill(res,b,g){if(res==='won')return `<span class="pill win">Won${b.toWin!=null?' +$'+Number(b.toWin).toFixed(2):''}</span>`;if(res==='lost')return `<span class="pill loss">Lost${b.risk!=null?' -$'+Number(b.risk).toFixed(2):''}</span>`;if(g&&gameState(g)==='in')return `<span class="pill live">LIVE ${health(healthLevel(b,g))}</span>`;return '<span class="pill upcoming">UPCOMING</span>'}
+function betState(b,g){let r=derivedResult(b,g);if(r==='won'||r==='lost'||r==='push')return'closed';return g&&gameState(g)==='in'?'live':'upcoming'}
+function betCard(b){let g=findGame(b),r=derivedResult(b,g),bs=betState(b,g),title=(b.awayTeam&&b.homeTeam)?`${b.awayTeam} at ${b.homeTeam}`:(b.structure==='parlay'?'Parlay':'Wager'),sportName=b.sport||'Other',score=g?gameDetail(g):'No ESPN match yet',id='manual-'+b.betId.replace(/[^a-zA-Z0-9]/g,'');let legs='';if(Array.isArray(b.legs)&&b.legs.length){legs=`<div class="expand" onclick="this.nextElementSibling.classList.toggle('open')">Show ${b.legs.length} legs</div><div class="legs">${b.legs.map((l,i)=>{let oid=b.betId+':'+i,ov=overrides()[oid],ls=ov?`<span class="pill ${ov==='won'?'win':'loss'}">${ov==='won'?'Won':'Lost'}</span>`:(l.betOnlineStatus==='WON'?'<span class="pill win">Won</span>':l.betOnlineStatus==='LOST'?'<span class="pill loss">Lost</span>':'<span class="sub">Open</span>');return `<div class="leg"><div><div class="legname">${l.selection||l.description||'Leg '+(i+1)}</div><div class="legsub">${l.market||''}</div></div><div class="legstatus" onclick="toggleManual('${id}-leg-${i}')">${ls}</div><div class="manual" id="${id}-leg-${i}" style="grid-column:1/-1"><button class="mw" onclick="setOverride('${oid}','won')">Won</button><button class="ml" onclick="setOverride('${oid}','lost')">Lost</button><button onclick="setOverride('${oid}','auto')">Auto</button></div></div>`}).join('')}</div>`}return `<div class="card ${bs==='live'?'live':''}" data-state="${bs}" data-sport="${sportName.toLowerCase()}"><div class="topline"><div><div class="title">${title}</div><div class="sub">${sportName} · ${(b.structure||'straight').replaceAll('_',' ')}</div></div><div onclick="toggleManual('${id}')">${resultPill(r,b,g)}</div></div><div class="pick">${fmtLine(b)}</div>${fmtMoney(b)?`<div class="money">${fmtMoney(b)}</div>`:''}<div class="scorelink" ${g?`onclick="goGame('${b.sport==='NFL'?'nfl':'college'}','${g.id}')"`:''}>${score}</div><div class="manual" id="${id}"><button class="mw" onclick="setOverride('${b.betId}','won')">Won</button><button class="ml" onclick="setOverride('${b.betId}','lost')">Lost</button><button onclick="setOverride('${b.betId}','auto')">Auto</button></div>${legs}</div>`}
+function toggleManual(id){document.getElementById(id)?.classList.toggle('open')}
+function calcSummary(){let closed=0,w=0,l=0,pl=0,openRisk=0;state.bets.forEach(b=>{let r=derivedResult(b,findGame(b));if(r==='won'){closed++;w++;pl+=Number(b.toWin||0)}else if(r==='lost'){closed++;l++;pl-=Number(b.risk||0)}else openRisk+=Number(b.risk||0)});return{closed,w,l,pl,openRisk}}
+function renderBets(){let s=calcSummary(),week=state.week?.label||'Current week',cards=state.bets.map(b=>({b,g:findGame(b)}));cards.sort((x,y)=>({live:0,upcoming:1,closed:2}[betState(x.b,x.g)]-({live:0,upcoming:1,closed:2}[betState(y.b,y.g)])||new Date(x.g?.date||0)-new Date(y.g?.date||0));let filtered=cards.filter(x=>(betFilter==='all'||betState(x.b,x.g)===betFilter)&&(sportFilter==='all'||(x.b.sport||'other').toLowerCase()===sportFilter));let open=filtered.filter(x=>betState(x.b,x.g)!=='closed'),closed=filtered.filter(x=>betState(x.b,x.g)==='closed');document.getElementById('bets').innerHTML=`<div class="weekline"><strong>${week}</strong><span>${state.bets.length} wagers</span></div><div class="summary"><div class="sum"><b>${state.bets.length}</b><span>bets</span></div><div class="sum"><b>${s.w}–${s.l}</b><span>closed</span></div><div class="sum"><b>$${s.openRisk.toFixed(0)}</b><span>open risk</span></div><div class="sum"><b class="${s.pl>=0?'pos':'neg'}">${s.pl>=0?'+':''}$${s.pl.toFixed(2)}</b><span>P/L</span></div></div><div class="betfilterrow"><div class="filters">${['all','live','upcoming','closed'].map(x=>`<button class="filter ${betFilter===x?'active':''}" data-bf="${x}">${x[0].toUpperCase()+x.slice(1)}</button>`).join('')}</div><div class="sportfilters">${['all','nfl','college','other'].map(x=>`<button class="sport ${sportFilter===x?'active':''}" data-sf="${x}">${x==='nfl'?'NFL':x[0].toUpperCase()+x.slice(1)}</button>`).join('')}</div></div>${open.map(x=>betCard(x.b)).join('')}${closed.length?`<div class="sectionhead" id="closedHead">Closed (${closed.length}) · tap to collapse</div><div class="closedwrap" id="closedWrap">${closed.map(x=>betCard(x.b)).join('')}</div>`:''}`;document.querySelectorAll('[data-bf]').forEach(b=>b.onclick=()=>{betFilter=b.dataset.bf;renderBets()});document.querySelectorAll('[data-sf]').forEach(b=>b.onclick=()=>{sportFilter=b.dataset.sf;renderBets()});let h=document.getElementById('closedHead');if(h)h.onclick=()=>document.getElementById('closedWrap').classList.toggle('collapsed')}
+function renderAllGames(){let list=sport==='nfl'?state.nfl:state.collegeView;list=[...list].sort((a,b)=>({in:0,pre:1,post:2}[gameState(a)]-({in:0,pre:1,post:2}[gameState(b)])||new Date(a.date)-new Date(b.date));document.getElementById('allgames').innerHTML=`<div class="weekline"><strong>${sport==='nfl'?'NFL':'College'}</strong><span>tap ☆ to track</span></div>`+(list.length?list.map(e=>gameCard(e,sport)).join(''):'<div class="empty">No games found.</div>');attachStars()}
+function renderTabs(){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===tab));localStorage.setItem('football-v4-tab',tab);document.querySelector('.toolbar').style.display=tab==='allgames'?'flex':'none';renderAll()}
+function renderAll(){renderScoreboard();renderBets();renderAllGames()}
+function goGame(sp,id){tab='scoreboard';renderTabs();setTimeout(()=>document.getElementById(`game-${sp}-${id}`)?.scrollIntoView({behavior:'smooth',block:'center'}),50)}
+async function fetchBoard(sp,g){let u=`${ESPN[sp]}?dates=${ymd()}&limit=300`;if(sp==='college'&&g)u+=`&groups=${g}`;let r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error(`${sp} HTTP ${r.status}`);return (await r.json()).events||[]}
+async function fetchBets(){let r=await fetch(BET_URL+'?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error('bet feed HTTP '+r.status);let j=await r.json();state.bets=j.bets||[];state.week=j.week||null}
+async function refresh(){document.getElementById('updated').textContent='Refreshing…';try{let allP=fetchBoard('college','80'),viewP=group==='80'?allP:fetchBoard('college',group);let [collegeAll,collegeView,nfl]=await Promise.all([allP,viewP,fetchBoard('nfl'),fetchBets()]);state.collegeAll=collegeAll;state.collegeView=collegeView;state.nfl=nfl;state.lastUpdate=Date.now();document.getElementById('updated').textContent='Updated now';renderAll()}catch(e){document.getElementById('updated').textContent='Update delayed';console.error(e);renderAll()}}
+setInterval(()=>{if(state.lastUpdate){let s=Math.floor((Date.now()-state.lastUpdate)/1000);document.getElementById('updated').textContent=s<60?`Updated ${s}s ago`:`Updated ${Math.floor(s/60)}m ago`}},5000);
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;renderTabs()});document.getElementById('sportSel').value=sport;document.getElementById('conference').value=group;document.getElementById('sportSel').onchange=e=>{sport=e.target.value;localStorage.setItem('football-v4-sport',sport);document.getElementById('conference').style.display=sport==='college'?'':'none';renderAllGames()};document.getElementById('conference').onchange=e=>{group=e.target.value;localStorage.setItem('football-v4-group',group);refresh()};document.getElementById('refreshBtn').onclick=refresh;document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});document.getElementById('conference').style.display=sport==='college'?'':'none';renderTabs();refresh();setInterval(()=>{if(!document.hidden)refresh()},30000);
+</script></body></html>
