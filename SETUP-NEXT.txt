@@ -1,0 +1,15 @@
+Football Score App starter
+
+This package uses the known-working Scoreboard V3 files as the app foundation.
+It also adds:
+  data/current-week.json
+  data/weeks/
+  scripts/
+
+COPY THE CONTENTS of this ZIP into your existing local football-score-app
+repository folder (the folder that already contains README.md).
+
+Do not copy the outer football-score-app-starter folder itself if that would
+create a nested folder. README.md should remain at the same level as index.html.
+
+After copying, GitHub Desktop should show the new files under Changes.
