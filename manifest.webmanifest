@@ -3,8 +3,8 @@
   "short_name": "Football",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#0b1020",
-  "theme_color": "#111827",
+  "background_color": "#0B162A",
+  "theme_color": "#0B162A",
   "icons": [
     {
       "src": "icon-192.png",

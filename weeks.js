@@ -1,0 +1,94 @@
+/* Tuesday–Monday history and conservative settlement. BetOnline objects stay intact. */
+function bettingWeek(now){
+  var d=new Date(now||Date.now());d.setHours(12,0,0,0);d.setDate(d.getDate()-(d.getDay()+5)%7);
+  var start=isoDay(d),a=(d.getMonth()+1)+'/'+d.getDate();d.setDate(d.getDate()+6);
+  return {start:start,end:isoDay(d),label:a+'–'+(d.getMonth()+1)+'/'+d.getDate()};
+}
+function isoDay(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function previousWeek(w){var d=new Date(w.start+'T12:00:00');d.setDate(d.getDate()-7);return bettingWeek(d)}
+function loadHistory(){try{return JSON.parse(localStorage.getItem('football-history-v1')||'{}')}catch(e){return {}}}
+var historyWeeks=loadHistory(),selectedWeek=bettingWeek(),localPreview=location.hostname==='127.0.0.1'||location.hostname==='localhost',refreshToken=0;
+function blankWeek(w){return {week:w,bets:[],nfl:[],college:[],sources:{}}}
+function remember(){try{localStorage.setItem('football-history-v1',JSON.stringify(historyWeeks))}catch(e){document.getElementById('storageStatus').textContent='Browser history storage full; local disk archive is still available in the preview.'}}
+function weekDates(){return selectedWeek.start.replace(/-/g,'')+'-'+selectedWeek.end.replace(/-/g,'')}
+function boardFilter(){var h=historyWeeks[selectedWeek.start]||{},cached=h.conferences&&h.conferences[group];S.collegeView=group==='top25'?S.collegeAll.filter(top25Event):group==='80'?S.collegeAll:cached?cached.map(function(e){return S.collegeAll.find(function(x){return x.id===e.id})||e}):S.collegeAll.filter(function(e){return (comp(e).competitors||[]).some(function(c){return String(c.team&&c.team.conferenceId)===group})})}
+async function refreshConference(){if(group==='80'||group==='top25')return;var w=Object.assign({},selectedWeek),g=group,h=historyWeeks[w.start]||(historyWeeks[w.start]=blankWeek(w));try{var j=await jsonFetch(ESPN.college+'?dates='+w.start.replace(/-/g,'')+'-'+w.end.replace(/-/g,'')+'&limit=1000&groups='+encodeURIComponent(g));if(!Array.isArray(j.events))throw Error('Invalid conference scoreboard');h.conferences=h.conferences||{};h.conferences[g]=j.events;h.conferenceError=null;remember()}catch(e){h.conferenceError='Conference scores delayed'}if(selectedWeek.start===w.start&&group===g){boardFilter();renderAll();showSourceStatus()}}
+function showWeek(){
+  var h=historyWeeks[selectedWeek.start]||blankWeek(selectedWeek);S.week=selectedWeek;S.bets=h.bets||[];S.nfl=h.nfl||[];S.collegeAll=h.college||[];boardFilter();
+  var keys=Object.keys(historyWeeks);[bettingWeek(),previousWeek(bettingWeek()),selectedWeek].forEach(function(w){if(keys.indexOf(w.start)<0)keys.push(w.start)});
+  document.getElementById('weekSelect').innerHTML=keys.sort().reverse().map(function(k){var w=bettingWeek(new Date(k+'T12:00:00'));return '<option value="'+k+'"'+(k===selectedWeek.start?' selected':'')+'>'+w.label+(k===bettingWeek().start?' · Current':'')+'</option>'}).join('');
+  renderAll();showSourceStatus();
+}
+function showSourceStatus(){var h=historyWeeks[selectedWeek.start]||blankWeek(selectedWeek);document.getElementById('updated').textContent=['nfl','college','bets'].map(function(k){var s=h.sources&&h.sources[k],label=k==='nfl'?'NFL':k==='college'?'College':'Bets';return label+': '+(!s?'not loaded':s.error?'delayed'+(s.updatedAt?' (saved '+new Date(s.updatedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+')':''):new Date(s.updatedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}))}).join(' · ')+(group!=='80'&&group!=='top25'&&h.conferenceError?' · '+h.conferenceError:'')}
+async function jsonFetch(url,options){var response=await fetch(url,Object.assign({cache:'no-store',signal:AbortSignal.timeout(25000)},options));if(!response.ok)throw Error('HTTP '+response.status);return response.json()}
+function mergeBets(old,incoming){var map=new Map((old||[]).map(function(b){return [String(b.betId),b]}));(incoming||[]).forEach(function(b){var prev=map.get(String(b.betId))||{};var merged=Object.assign({},prev,b);if(prev.legs){var legs=prev.legs.slice();(b.legs||[]).forEach(function(l,i){var index=l.legNumber!=null?legs.findIndex(function(x){return x.legNumber===l.legNumber}):i;if(index<0)legs.push(l);else legs[index]=Object.assign({},legs[index],l)});merged.legs=legs}if(bookResult(prev)&&!bookResult(b)){merged.betOnlineStatus=prev.betOnlineStatus;merged.toWin=prev.toWin;merged.risk=prev.risk}map.set(String(b.betId),merged)});return Array.from(map.values())}
+function reconcileImportedBets(j){var overrides=ov();(j.bets||[]).forEach(function(b){if(bookResult(b)){delete overrides[b.betId];delete overrides[b.betId+':profit']}});localStorage.setItem('football-v4-overrides',JSON.stringify(overrides))}
+async function refreshWeek(w,token){
+  var key=w.start,h=historyWeeks[key]||(historyWeeks[key]=blankWeek(w));h.sources=h.sources||{};
+  await Promise.allSettled(['nfl','college','bets'].map(async function(source){
+    try{
+      var data;
+      if(localPreview)data=await jsonFetch('/api/week/'+key+'/'+source,{method:'POST'});
+      else if(source==='bets'){
+        var base=BET_URL.substring(0,BET_URL.lastIndexOf('/')+1),j=await jsonFetch(base+(key===bettingWeek().start?'current-week.json':'weeks/'+key+'.json'));
+        if(!j.week||j.week.start!==key)throw Error('Bet feed is for another week');data={items:j.bets,updatedAt:new Date().toISOString()};
+      }else{var j=await jsonFetch(ESPN[source]+'?dates='+key.replace(/-/g,'')+'-'+w.end.replace(/-/g,'')+'&limit=1000'+(source==='college'?'&groups=80':''));if(!Array.isArray(j.events))throw Error('Invalid scoreboard');data={items:j.events,updatedAt:new Date().toISOString()}}
+      if(source==='bets'){h.bets=mergeBets(h.bets,data.items);reconcileImportedBets({bets:h.bets})}else{var games=new Map((h[source]||[]).map(function(e){return [e.id,e]}));data.items.forEach(function(e){games.set(e.id,e)});h[source]=Array.from(games.values());S.lastUpdate=Date.now()}
+      h.sources[source]={updatedAt:data.updatedAt,error:data.error||null};
+    }catch(e){h.sources[source]=Object.assign({},h.sources[source],{error:String(e.message||e)})}
+    remember();if(key===selectedWeek.start&&token===refreshToken)showWeek();
+  }));
+}
+async function refresh(){
+  if(document.hidden||refreshing)return;refreshing=true;var token=++refreshToken,w=Object.assign({},selectedWeek);document.getElementById('refreshBtn').disabled=true;
+  try{await Promise.allSettled([refreshWeek(w,token),refreshConference()]);if(w.start===selectedWeek.start&&token===refreshToken){await refreshSummaries();renderAll()}}
+  finally{refreshing=false;document.getElementById('refreshBtn').disabled=false;if(w.start!==selectedWeek.start)refresh()}
+}
+function bookResult(b){var s=String(b.betOnlineStatus||'').toUpperCase();return s==='WON'?'won':s==='LOST'?'lost':['PUSH','VOID','CANCELLED','CANCELED'].indexOf(s)>=0?'push':null}
+function exactTeam(c,name){return !!norm(name)&&teamVals(c).includes(norm(name))}
+function findGame(b){var pool=eventPoolForSport(b.sport);if(b.espnEventId)return pool.find(function(e){return String(e.id)===String(b.espnEventId)})||null;var matches=pool.filter(function(e){var t=teams(e);return exactTeam(t.away,b.awayTeam)&&exactTeam(t.home,b.homeTeam)});return matches.length===1?matches[0]:null}
+function gs(e){var status=comp(e).status||e&&e.status||{};return status.type?status.type.state:'pre'}
+function finalGame(g){var t=(comp(g).status||g&&g.status||{}).type||{};return t.completed===true||t.name==='STATUS_FINAL'||(t.state==='post'&&!/cancel|postpon|suspend/i.test(t.name||t.description||''))}
+function evaluateMarket(item,g){
+  if(!g)return {status:'pending'};if(!finalGame(g))return {status:gs(g)==='in'?'live':'pending'};
+  var unknown={status:'unavailable'},scope=String(item.scope||item.period||item.segment||'game').toLowerCase();
+  if(['game','full game','full_game'].indexOf(scope)<0)return unknown;
+  var t=teams(g);if(!t.away||!t.home||t.away.score==null||t.home.score==null||t.away.score===''||t.home.score==='')return unknown;
+  var a=Number(t.away.score),h=Number(t.home.score);if(!Number.isFinite(a)||!Number.isFinite(h))return unknown;
+  var market=String(item.market||'').toLowerCase(),v;
+  if(market==='spread'||market==='moneyline'){
+    var away=exactTeam(t.away,item.selection),home=exactTeam(t.home,item.selection);if(away===home)return unknown;
+    v=away?a-h:h-a;
+    if(market==='spread'){if(item.line==null||item.line===''||!Number.isFinite(Number(item.line)))return unknown;v+=Number(item.line)}
+  }else if(market==='total'){
+    if(item.line==null||item.line===''||!Number.isFinite(Number(item.line)))return unknown;
+    var side=String(item.side||item.selection||'').toLowerCase();if(!/^(over|under)\b/.test(side))return unknown;
+    v=(a+h-Number(item.line))*(/^under\b/.test(side)?-1:1);
+  }else return unknown; // Props and partial games require a verified settlement source.
+  return {status:v>0?'won':v<0?'lost':'push',locked:true};
+}
+function legGame(leg,parent){var b=Object.assign({sport:parent.sport},leg);if(!b.espnEventId&&parent.structure==='same_game_parlay')b.espnEventId=parent.espnEventId;return findGame(b)}
+function legDisplayStatus(leg,parent){return bookResult({betOnlineStatus:leg.status})||evaluateMarket(leg,legGame(leg,parent)).status}
+function inferredResult(b,g){
+  if(Array.isArray(b.legs)&&b.legs.length){var statuses=b.legs.map(function(l){return legDisplayStatus(l,b)});if(b.structure==='teaser')return null;if(statuses.includes('lost'))return 'lost';if(statuses.every(function(s){return s==='won'}))return 'won';if(statuses.every(function(s){return s==='push'}))return 'push';return null}
+  var s=evaluateMarket(b,g).status;return ['won','lost','push'].includes(s)?s:null;
+}
+function needsManual(b,g){if(bookResult(b)||inferredResult(b,g))return false;if(b.legs&&b.legs.length)return b.legs.every(function(l){return bookResult({betOnlineStatus:l.status})||finalGame(legGame(l,b))});return finalGame(g)}
+function authoritativeResult(b){return bookResult(b)||inferredResult(b,findGame(b))||(needsManual(b,findGame(b))?ov()[b.betId]||null:null)}
+function result(b,g){return authoritativeResult(b)}
+function parlayAutoResult(b){return inferredResult(b,findGame(b))}
+function betState(b,g){if(authoritativeResult(b))return 'closed';if(needsManual(b,g))return 'review';if((b.legs||[]).some(function(l){return gs(legGame(l,b))==='in'})||gs(g)==='in')return 'live';return 'upcoming'}
+function setOv(id,v){var b=S.bets.find(function(b){return b.betId===id});if(!b||!needsManual(b,findGame(b)))return;var o=ov();if(v==='won'&&(b.legs||[]).some(function(l){return legDisplayStatus(l,b)==='push'})){var amount=prompt('Enter the actual net amount won (excluding returned stake). A pushed leg can change a parlay payout.');if(amount===null||amount.trim()===''||!Number.isFinite(Number(amount))||Number(amount)<0)return;o[id+':profit']=Number(amount)}if(v==='auto'){delete o[id];delete o[id+':profit']}else if(['won','lost','push'].includes(v))o[id]=v;localStorage.setItem('football-v4-overrides',JSON.stringify(o));renderAll()}
+function profit(b){var amount=ov()[b.betId+':profit'];return !bookResult(b)&&needsManual(b,findGame(b))&&amount!=null?Number(amount):Number(b.toWin||0)}
+function pill(b,g){var r=authoritativeResult(b);if(r==='won')return '<span class="pill win">WON +$'+profit(b).toFixed(2)+'</span>';if(r==='lost')return '<span class="pill loss">LOST −$'+Number(b.risk||0).toFixed(2)+'</span>';if(r==='push')return '<span class="pill push">PUSH</span>';if(needsManual(b,g))return '<span class="pill review">Result unavailable — Grade manually</span>';return '<span class="pill '+(betState(b,g)==='live'?'livepill':'upcoming')+'">'+(betState(b,g)==='live'?'Live':'Upcoming')+'</span>'}
+var originalBetCard=betCard;
+betCard=function(b){var html=originalBetCard(b),can=needsManual(b,findGame(b));if(!can)html=html.replace(/<button class="status-button"[^>]*>([\s\S]*?)<\/button>/,'<span>$1</span>').replace(/<div class="manual"[\s\S]*?<\/div>/,'');return html};
+var originalLegHtml=legHtml;
+legHtml=function(l,b){var html=originalLegHtml(l,b);return legDisplayStatus(l,b)==='unavailable'?html.replace('>Upcoming</span>','>Result unavailable</span>'):html};
+function bindLeagueControls(){document.querySelectorAll('[data-games]').forEach(function(b){b.onclick=function(){sport=b.dataset.games;localStorage.setItem('football-v4-sport',sport);renderAll()}});document.querySelectorAll('.conference').forEach(function(s){s.onchange=function(){group=this.value;localStorage.setItem('football-v45-conference',group);boardFilter();renderAll();refreshConference()}})}
+async function startHistory(){
+  if(localPreview){try{var index=await jsonFetch('/api/weeks');await Promise.all(index.weeks.map(async function(k){var h=await jsonFetch('/api/week/'+k);var old=historyWeeks[k]||{};historyWeeks[k]=Object.assign({},old,h,{bets:mergeBets(old.bets,h.bets)})}))}catch(e){document.getElementById('storageStatus').textContent='Local archive unavailable: '+e.message}}
+  else{try{var index=await jsonFetch(BET_URL.substring(0,BET_URL.lastIndexOf('/')+1)+'index.json');(index.weeks||[]).forEach(function(entry){var k=typeof entry==='string'?entry:entry.start;if(/^\d{4}-\d{2}-\d{2}$/.test(k)&&!historyWeeks[k])historyWeeks[k]=blankWeek(bettingWeek(new Date(k+'T12:00:00')))})}catch(e){console.warn('Week index unavailable; using current, previous, and saved weeks')}}
+  showWeek();renderTabs();await refresh();var prev=previousWeek(bettingWeek());if(!historyWeeks[prev.start]||!historyWeeks[prev.start].nfl.length||!historyWeeks[prev.start].college.length)await refreshWeek(prev,refreshToken);
+}
+document.getElementById('weekSelect').onchange=function(){selectedWeek=bettingWeek(new Date(this.value+'T12:00:00'));refreshToken++;showWeek();refresh()};

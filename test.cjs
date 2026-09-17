@@ -1,0 +1,33 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const elements={},storage=new Map();
+const context={console,Date,Map,Set,Number,String,Array,JSON,Math,Promise,AbortSignal,location:{hostname:'localhost'},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},document:{getElementById:id=>elements[id]||(elements[id]={}),querySelectorAll:()=>[]},setTimeout};
+vm.createContext(context);
+const html=fs.readFileSync(__dirname+'/index.html','utf8');vm.runInContext(html.match(/<script>([\s\S]*?)<\/script>/)[1],context);vm.runInContext(fs.readFileSync(__dirname+'/weeks.js','utf8'),context);
+let count=0;function test(name,fn){fn();count++;console.log('PASS '+name)}
+const game=(a=21,h=17)=>({id:'1',competitions:[{status:{type:{state:'post',completed:true}},competitors:[{homeAway:'away',score:String(a),team:{displayName:'Away',conferenceId:'8'}},{homeAway:'home',score:String(h),team:{displayName:'Home'}}]}]});
+const bet=(extra={})=>({betId:'a',sport:'NFL',espnEventId:'1',market:'spread',selection:'Away',line:-3,period:'game',risk:40,toWin:36.36,...extra});
+context.S.nfl=[game()];
+test('Tuesday and Monday belong to same range',()=>{assert.equal(context.bettingWeek(new Date('2026-09-14T23:00:00')).start,'2026-09-08');assert.equal(context.bettingWeek(new Date('2026-09-15T00:00:00')).label,'9/15–9/21')});
+test('year rollover',()=>assert.equal(context.bettingWeek(new Date('2027-01-01T12:00:00')).start,'2026-12-29'));
+test('spread win loss push',()=>{for(const [line,r] of [[-3,'won'],[-4,'push'],[-5,'lost']])assert.equal(context.result(bet({line}),game()),r)});
+test('total under over push',()=>{for(const [selection,line,r] of [['Under',39,'won'],['Over',39,'lost'],['Over',38,'push']])assert.equal(context.result(bet({market:'total',selection,line}),game()),r)});
+test('moneyline and tie',()=>{assert.equal(context.evaluateMarket(bet({market:'moneyline'}),game()).status,'won');assert.equal(context.evaluateMarket(bet({market:'moneyline'}),game(17,17)).status,'push')});
+test('unmatched team is never assumed home',()=>assert.equal(context.evaluateMarket(bet({selection:'Unknown'}),game()).status,'unavailable'));
+test('similar team names do not accidentally match',()=>{const g=game();g.competitions[0].competitors[0].team.displayName='Michigan State';assert.equal(context.evaluateMarket(bet({selection:'Michigan'}),g).status,'unavailable')});
+test('missing explicit event ID does not fall back to another game',()=>assert.equal(context.findGame(bet({espnEventId:'missing',awayTeam:'Away',homeTeam:'Home'})),null));
+test('missing line, score, unsupported scope need review',()=>{assert.equal(context.evaluateMarket(bet({line:null}),game()).status,'unavailable');assert.equal(context.evaluateMarket(bet({period:'first half'}),game()).status,'unavailable');let g=game();g.competitions[0].competitors[0].score=null;assert.equal(context.evaluateMarket(bet(),g).status,'unavailable')});
+test('manual only for final unresolved, sportsbook wins',()=>{let b=bet({market:'player_prop'});context.S.bets=[b];assert.equal(context.betState(b,game()),'review');context.setOv('a','won');assert.equal(context.result(b,game()),'won');b.betOnlineStatus='LOST';context.reconcileImportedBets({bets:[b]});assert.equal(context.result(b,game()),'lost');assert.equal(context.ov().a,undefined)});
+test('ESPN beats a stale manual override',()=>{storage.set('football-v4-overrides','{"a":"lost"}');assert.equal(context.result(bet(),game()),'won')});
+test('parlay loss, win and uncertain reduced payout',()=>{let b=bet({structure:'parlay',legs:[bet(),bet()]});assert.equal(context.inferredResult(b,game()),'won');b.legs[1].line=-5;assert.equal(context.inferredResult(b,game()),'lost');b.legs[1].line=-4;assert.equal(context.inferredResult(b,game()),null);assert.equal(context.needsManual(b,game()),true)});
+test('pending imports preserve legs and settled sportsbook grades',()=>{let merged=context.mergeBets([bet({betOnlineStatus:'WON',legs:[{raw:'detail'}]})],[bet({betOnlineStatus:'PENDING',legs:[]})]);assert.equal(merged.length,1);assert.equal(merged[0].legs[0].raw,'detail');assert.equal(merged[0].betOnlineStatus,'WON')});
+test('financial summary recomputes including pushes',()=>{context.S.bets=[bet({betId:'w',betOnlineStatus:'WON'}),bet({betId:'l',betOnlineStatus:'LOST'}),bet({betId:'p',betOnlineStatus:'PUSH'})];context.renderBets();assert.match(elements.bets.innerHTML,/1–1–1/);assert.match(elements.bets.innerHTML,/\$-3\.64/)});
+test('both scoreboards share ESPN ranks, bets exclude rank markup',()=>{let g=game();g.competitions[0].competitors[0].curatedRank={current:7};assert.match(context.gameCard(g,'college'),/class="rank">7/);assert.doesNotMatch(context.betCard(bet()),/class="rank"/)});
+(async()=>{
+  const w=context.bettingWeek(new Date('2026-09-15T12:00:00'));context.selectedWeek=w;context.historyWeeks={};let finishBets;context.showWeek=()=>{};
+  context.jsonFetch=async url=>{if(url.endsWith('/college'))throw Error('college unavailable');if(url.endsWith('/bets'))return new Promise(resolve=>finishBets=resolve);return {items:[game()],updatedAt:'2026-09-16T20:00:00Z'}};
+  const running=context.refreshWeek(w,context.refreshToken);await new Promise(setImmediate);
+  test('NFL timestamp updates before delayed bet response',()=>{assert.equal(context.historyWeeks[w.start].sources.nfl.updatedAt,'2026-09-16T20:00:00Z');assert.equal(context.historyWeeks[w.start].sources.college.error,'college unavailable')});
+  finishBets({items:[bet()],updatedAt:'2026-09-16T20:01:00Z'});await running;
+  test('failed source does not clear scores or successful bet data',()=>{assert.equal(context.historyWeeks[w.start].nfl.length,1);assert.equal(context.historyWeeks[w.start].bets.length,1)});
+  console.log(count+' checks passed');
+})().catch(e=>{console.error(e);process.exitCode=1});
