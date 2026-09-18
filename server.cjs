@@ -2,6 +2,7 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
+const scoreFeed = require('./score-feed.js');
 const root = __dirname;
 const dataRoot = path.resolve(process.env.FOOTBALL_DATA_DIR || path.join(root, '..', 'football-score-data'));
 const archiveRoot = path.join(root, 'data', 'score-history');
@@ -27,13 +28,12 @@ async function refreshSource(k,source){
   if(source==='bets'){const j=feed(k);if(!j||!Array.isArray(j.bets))throw Error('No local BetOnline export for this week');return {items:j.bets,updatedAt:new Date().toISOString()}}
   const jobKey=k+source;if(pending.has(jobKey))return pending.get(jobKey);
   const job=(async()=>{
-    const w=week(new Date(k+'T12:00:00')),league=source==='nfl'?'nfl':'college-football';
-    const url='https://site.api.espn.com/apis/site/v2/sports/football/'+league+'/scoreboard?dates='+k.replaceAll('-','')+'-'+w.end.replaceAll('-','')+'&limit=1000'+(source==='college'?'&groups=80':'');
-    const response=await fetch(url,{signal:AbortSignal.timeout(20000)});if(!response.ok)throw Error('ESPN '+source+' HTTP '+response.status);
-    const data=await response.json();if(!Array.isArray(data.events))throw Error('Invalid ESPN response');
+    const w=week(new Date(k+'T12:00:00'));
+    const data=await scoreFeed.fetchWeek(source,w.start,w.end);
+    if(data.error&&!data.events.length)throw Error(data.error);
     const file=path.join(archiveRoot,k+'.json'),h=read(file,{week:w,nfl:[],college:[],sources:{}}),games=new Map(h[source].map(e=>[e.id,e]));
-    data.events.forEach(e=>games.set(e.id,e));h[source]=Array.from(games.values());h.sources[source]={updatedAt:new Date().toISOString()};write(file,h);
-    return {items:h[source],updatedAt:h.sources[source].updatedAt};
+    data.events.forEach(e=>games.set(e.id,e));h[source]=Array.from(games.values());h.sources[source]={updatedAt:data.updatedAt,error:data.error};write(file,h);
+    return {items:h[source],updatedAt:h.sources[source].updatedAt,error:data.error};
   })();pending.set(jobKey,job);try{return await job}finally{pending.delete(jobKey)}
 }
 function keys(){const set=new Set([week().start]);const d=new Date();d.setDate(d.getDate()-7);set.add(week(d).start);for(const dir of [archiveRoot,betArchiveRoot,path.join(dataRoot,'weeks')]){if(fs.existsSync(dir))fs.readdirSync(dir).forEach(n=>{if(valid(n.replace('.json','')))set.add(n.replace('.json',''))})}const current=read(path.join(dataRoot,'current-week.json'),null);if(current?.week?.start&&valid(current.week.start))set.add(current.week.start);return [...set].sort()}
@@ -45,7 +45,7 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==='/api/weeks')return send(res,200,{weeks:keys()});
     const m=url.pathname.match(/^\/api\/week\/(\d{4}-\d{2}-\d{2})(?:\/(nfl|college|bets))?$/);
     if(m&&valid(m[1])){if(!m[2])return send(res,200,snapshot(m[1]));if(req.method!=='POST')return send(res,405,{error:'POST required'});try{return send(res,200,await refreshSource(m[1],m[2]))}catch(e){const h=snapshot(m[1]);if(m[2]!=='bets'&&h[m[2]].length)return send(res,200,{items:h[m[2]],updatedAt:h.sources[m[2]]?.updatedAt,error:e.message});throw e}}
-    const allowed={'/':'index.html','/index.html':'index.html','/weeks.js':'weeks.js','/manifest.webmanifest':'manifest.webmanifest','/sw.js':'sw.js','/icon-192.png':'icon-192.png','/icon-512.png':'icon-512.png'};
+    const allowed={'/':'index.html','/index.html':'index.html','/weeks.js':'weeks.js','/score-feed.js':'score-feed.js','/manifest.webmanifest':'manifest.webmanifest','/sw.js':'sw.js','/icon-192.png':'icon-192.png','/icon-512.png':'icon-512.png'};
     const file=allowed[url.pathname];if(!file){res.writeHead(404);return res.end('Not found')}
     const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.png':'image/png','.webmanifest':'application/manifest+json'};
     res.writeHead(200,{'Content-Type':types[path.extname(file)],'Cache-Control':'no-store'});fs.createReadStream(path.join(root,file)).pipe(res);

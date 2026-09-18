@@ -111,7 +111,7 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 </header>
 <div id="storageStatus" role="status"></div><div class="preview-tools"><button id="sampleRankings" type="button" aria-pressed="false">Sample rankings: Off</button></div>
 <details class="connection-panel"><summary>Check ESPN connection</summary>
-<p>This check requests NFL and college scores directly from <b>this browser</b>, using the same ESPN URLs as the app. It does not use the preview server or save results.</p>
+<p>This check requests NFL and college scores directly from <b>this browser</b>, using the same single-date request format as the app. It does not use the preview server or save results.</p>
 <button id="connectionCheck" type="button">Test this browser</button><pre id="connectionResults" role="status" aria-live="polite"></pre>
 <p><b>On your phone:</b> refresh both NFL and College in this app. Fresh games/scores in both views confirm that app can read ESPN on that phone and network at that time. Try Wi-Fi and cellular separately.</p>
 <p>For a basic reachability check, open <a id="phoneNfl" target="_blank" rel="noopener">ESPN NFL data</a> or <a id="phoneCollege" target="_blank" rel="noopener">ESPN college data</a> on the phone. A page of structured text with an “events” section means the endpoint is reachable. That alone does not confirm the app’s cross-site requests work.</p>
@@ -121,7 +121,7 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 <section id="bets" class="view"></section>
 <section id="allgames" class="view"></section>
 </main>
-<footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.6.0</footer>
+<footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.6.1</footer>
 </div>
 <script>
 var ESPN={
@@ -456,12 +456,8 @@ function renderTabs(){
   document.getElementById('toolbar').style.display='flex';
   localStorage.setItem('football-v4-tab',tab);renderAll();
 }
-async function fetchBoard(sp,g){
-  var u=ESPN[sp]+'?dates='+weekDates()+'&limit=300';
-  if(sp==='college'&&g&&g!=='top25')u+='&groups='+g;
-  var r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error(sp+' HTTP '+r.status);
-  var j=await r.json();return j.events||[];
-}
+async function fetchBoard(sp,g){var j=await ScoreFeed.fetchWeek(sp,selectedWeek.start,selectedWeek.end,g||'80');if(j.error)throw Error(j.error);return j.events}
+
 function summaryUrl(sp,id){return 'https://site.api.espn.com/apis/site/v2/sports/football/'+(sp==='NFL'?'nfl':'college-football')+'/summary?event='+encodeURIComponent(id)}
 async function fetchSummary(sp,id){
   var r=await fetch(summaryUrl(sp,id),{cache:'no-store'});if(!r.ok)throw new Error('summary HTTP '+r.status);return r.json();
@@ -510,6 +506,7 @@ async function refresh(){
   }finally{refreshing=false;document.getElementById('refreshBtn').disabled=false}
 }
 </script>
+<script src="score-feed.js"></script>
 <script src="weeks.js"></script>
 <script>
 // Presentation-only samples: never add these events to S or to saved history.
@@ -532,7 +529,8 @@ document.getElementById('sampleRankings').onclick=function(){sampleRankings=!sam
 if(sampleRankings){sport='college';group='80';tab='scoreboard'}
 updateSampleButton();
 if(!localPreview&&!sampleRankings)document.getElementById('sampleRankings').parentElement.hidden=true;
-function directScoreUrl(source){var w=bettingWeek();return ESPN[source]+'?dates='+w.start.replace(/-/g,'')+'-'+w.end.replace(/-/g,'')+'&limit=1000'+(source==='college'?'&groups=80':'')}
+function directScoreUrl(source){return ESPN[source]+'?dates='+dateKey(new Date())+'&limit=300'+(source==='college'?'&groups=80':'')}
+
 document.getElementById('phoneNfl').href=directScoreUrl('nfl');
 document.getElementById('phoneCollege').href=directScoreUrl('college');
 document.getElementById('connectionCheck').onclick=async function(){
