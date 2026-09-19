@@ -80,7 +80,7 @@ function bindLeagueControls(){document.querySelectorAll('[data-games]').forEach(
 async function startHistory(){
   showWeek();renderTabs();if(!localPreview)await checkSession();
   if(localPreview){try{var index=await jsonFetch('/api/weeks');await Promise.all(index.weeks.map(async function(k){var h=await jsonFetch('/api/week/'+k);var old=historyWeeks[k]||{};historyWeeks[k]=Object.assign({},old,h,{bets:mergeBets(old.bets,h.bets)})}))}catch(e){document.getElementById('storageStatus').textContent='Local archive unavailable: '+e.message}}
-  else{try{var index=await jsonFetch('/api/archive');await Promise.all((index.weeks||[]).map(async function(k){if(k===selectedWeek.start||k===previousWeek(bettingWeek()).start)await loadHostedWeek(k);else if(!historyWeeks[k])historyWeeks[k]=blankWeek(bettingWeek(new Date(k+'T12:00:00')))}))}catch(e){document.getElementById('storageStatus').textContent='Hosted archive unavailable; showing saved browser data.'}}
+  else{try{var index=await jsonFetch('/api/archive');await Promise.all((index.weeks||[]).map(async function(k){if(k===selectedWeek.start||k===previousWeek(bettingWeek()).start)await loadHostedWeek(k);else if(!historyWeeks[k])historyWeeks[k]=blankWeek(bettingWeek(new Date(k+'T12:00:00')))}))}catch(e){refreshError='Saved data: archive temporarily unavailable';showSourceStatus()}}
   remember();showWeek();historyReady=true;await refresh('full');
   var prev=previousWeek(bettingWeek());if(!historyWeeks[prev.start]||!historyWeeks[prev.start].nfl.length||!historyWeeks[prev.start].college.length){if(localPreview)await refreshWeek(prev,refreshToken);else try{await loadHostedWeek(prev.start)}catch(e){}}
 }

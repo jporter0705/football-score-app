@@ -93,7 +93,10 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .sample-note{padding:10px 12px;margin:8px 0;border-left:3px solid var(--accent);background:#20314A;color:#CCD9EB;font-size:12px;line-height:1.6;border-radius:6px}
 .record-win{color:var(--good)}.record-loss{color:#FF8585;font-weight:800}.record-push,.record-separator{color:#A6AFBA}
 .bet-matchup{display:flex;flex-wrap:wrap;align-items:center;gap:5px 8px}.bet-team{display:flex;align-items:center;gap:6px;min-width:0}.bet-team .logo{width:22px;height:22px;flex:0 0 22px}.bet-team .rank{margin:0;color:#FFD1BE}.matchup-at{font-size:10px;font-weight:500;color:var(--muted);margin-left:0}.bet-team-name{overflow-wrap:anywhere}.card .top{flex-wrap:wrap}.card .top>div:first-child{flex:1 1 220px}.card .top>.status-pack{max-width:100%;margin-left:auto}.leg .status-pack{max-width:none}.leg-matchup{margin:5px 0}.leg-matchup .bet-team{font-size:11px}.leg-matchup .logo{width:18px;height:18px;flex-basis:18px}
-@media(max-width:520px){.card .top>.status-pack{flex-basis:100%;margin-top:2px}.leg{grid-template-columns:1fr}.leg .status-pack{justify-content:flex-end}}
+.status-pack{flex-direction:column;align-items:flex-end}.status-pack .health{order:2;gap:2px}.status-pack .hsq{width:19px;height:19px;flex-basis:19px}
+.card .top{flex-wrap:nowrap}.card .top>div:first-child{flex:1 1 0}.card .situation,.card .pick{font-size:16px}
+#betLogout{margin:0;white-space:nowrap}.toolbar{gap:6px}.updated{min-width:0}
+@media(max-width:520px){.toolbar{flex-wrap:nowrap}#weekSelect{max-width:45%;font-size:11px}.updated{font-size:9px}#refreshBtn{flex-shrink:0;width:30px}.leg{grid-template-columns:minmax(0,1fr) auto}}
 </style>
 </head>
 <body>
@@ -106,18 +109,19 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 </div>
 <div class="toolbar" id="toolbar">
 <select id="weekSelect" aria-label="Betting week"></select><span id="betDates" style="margin-right:auto;font-size:11px;color:var(--muted)" hidden></span>
+<button id="betLogout" hidden type="button">Lock bets</button>
 <span class="updated" id="updated" role="status" aria-live="polite">Loading…</span>
 <button id="refreshBtn" type="button" aria-label="Refresh scores and bets" title="Refresh scores and bets">↻</button>
 </div>
 </header>
-<form id="betLogin" hidden><label>Private bets <input id="betPassword" type="password" autocomplete="current-password" placeholder="Access key" required></label> <button type="submit">Unlock</button><span id="loginStatus" role="status"></span></form><button id="betLogout" hidden type="button">Lock bets</button>
+<form id="betLogin" hidden><label>Private bets <input id="betPassword" type="password" autocomplete="current-password" placeholder="Access key" required></label> <button type="submit">Unlock</button><span id="loginStatus" role="status"></span></form>
 <div id="storageStatus" role="status"></div><div class="preview-tools"><button id="sampleRankings" type="button" aria-pressed="false">Sample rankings: Off</button></div>
 <main>
 <section id="scoreboard" class="view active"></section>
 <section id="bets" class="view"></section>
 <section id="allgames" class="view"></section>
 </main>
-<footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.7.0</footer>
+<footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.7.1</footer>
 </div>
 <script>
 var S={collegeAll:[],collegeView:[],nfl:[],bets:[],week:null,lastUpdate:0,summaries:{}};

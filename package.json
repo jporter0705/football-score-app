@@ -1,7 +1,7 @@
 {
   "name": "football-score-app",
   "private": true,
-  "version": "4.7.0",
+  "version": "4.7.1",
   "scripts": {
     "test": "node test.cjs && node test-score-feed.cjs && node test-release.cjs && node test-refresh.cjs && node --experimental-vm-modules test-netlify.cjs && node test-local-import.cjs",
     "build": "node scripts/build.cjs"

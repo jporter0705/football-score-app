@@ -8,4 +8,4 @@ const assets = ['index.html','weeks.js','sw.js','manifest.webmanifest','icon-192
 fs.rmSync(output, {recursive:true, force:true});
 fs.mkdirSync(output, {recursive:true});
 for (const name of assets) fs.copyFileSync(path.join(root,name),path.join(output,name));
-console.log('Built v4.7.0: '+assets.length+' public app assets.');
+console.log('Built v4.7.1: '+assets.length+' public app assets.');

@@ -14,7 +14,7 @@ for(const script of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)){
 setImmediate(()=>{try{
  assert.equal(context.localPreview,false);assert.equal(context.sampleRankings,false);assert.equal(elements.sampleRankings.parentElement.hidden,true);
  assert.equal(context.selectedWeek.start,context.bettingWeek().start);assert.equal(context.S.bets.length,0);
- assert.match(html,/build v4\.7\.0/);assert.match(html,/\.preview-tools\[hidden\]\{display:none\}/);
+ assert.match(html,/build v4\.7\.1/);assert.match(html,/\.preview-tools\[hidden\]\{display:none\}/);
  assert.doesNotMatch(html,/BET_URL|connectionCheck|site\.api\.espn|score-feed\.js/);
  assert.equal(JSON.parse(fs.readFileSync(__dirname+'/manifest.webmanifest')).theme_color,'#0B162A');
  console.log('PASS hosted startup, real-data default, current week, hidden sample controls, release version and manifest');
