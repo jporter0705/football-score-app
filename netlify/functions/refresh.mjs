@@ -1,4 +1,4 @@
-import { bettingWeek,readWeek,writeWeek,mergeGames,mergeBets,json } from './_archive.mjs';
+import { bettingWeek,readWeek,writeWeek,mergeGames,mergeBets,json,validWeek } from './_archive.mjs';
 
 const BET_BASE='https://raw.githubusercontent.com/jporter0705/football-score-data/main/';
 const timeout=()=>AbortSignal.timeout(20000);
@@ -15,5 +15,8 @@ async function refreshWeek(w){
   results.forEach((r,i)=>{const name=names[i];if(r.status==='fulfilled'){const x=r.value;if(name==='bets')h.bets=mergeBets(h.bets,x.items);else h[name]=mergeGames(h[name],x.items);h.sources[name]={updatedAt:x.updatedAt,error:x.error||null};}else h.sources[name]={...(h.sources[name]||{}),error:r.reason?.message||String(r.reason)};});
   h.archivedAt=new Date().toISOString();await writeWeek(w.start,h);return h;
 }
-export default async ()=>{try{const current=bettingWeek(),priorDate=new Date(current.start+'T12:00:00');priorDate.setDate(priorDate.getDate()-7);const prior=bettingWeek(priorDate);await Promise.all([refreshWeek(current),refreshWeek(prior)]);return json({ok:true,weeks:[current.start,prior.start],updatedAt:new Date().toISOString()});}catch(e){return json({error:e.message||String(e)},500);}};
-export const config={schedule:'*/15 * * * *'};
+export default async (request)=>{
+  if(request.method!=='POST')return json({error:'POST required'},405);
+  try{const url=new URL(request.url),key=url.searchParams.get('week')||bettingWeek().start;if(!validWeek(key))return json({error:'Invalid Tuesday week start'},400);const w=bettingWeek(new Date(key+'T12:00:00')),h=await refreshWeek(w);return json({ok:true,week:w.start,archivedAt:h.archivedAt,sources:h.sources});}catch(e){return json({error:e.message||String(e)},500);}
+};
+export const config={path:'/api/refresh'};
