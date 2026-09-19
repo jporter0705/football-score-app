@@ -7,6 +7,7 @@
 <title>Football Scoreboard</title>
 <link rel="manifest" href="manifest.webmanifest">
 <style>
+#betLogin{font-size:12px;margin:8px 0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}#betLogin[hidden],#betLogout[hidden]{display:none}#betLogin input{width:140px;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px}#betLogin button,#betLogout{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px;cursor:pointer}#betLogout{font-size:11px;margin:6px 0}
 :root{--bg:#0B162A;--panel:#15243B;--border:#30415B;--text:#f7f9fb;--muted:#8fb0c9;--accent:#E64100;--good:#63e6a1;--bad:#ef5350}
 *{box-sizing:border-box}
 body{margin:0;background:#0B162A;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -19,8 +20,8 @@ header{position:sticky;top:0;background:var(--bg);z-index:10;padding-top:4px}
 .toolbar select,.toolbar button{background:var(--panel);border:1px solid var(--border);color:#fff;border-radius:8px;padding:6px}
 .updated{margin-left:auto;color:var(--muted);font-size:10px}
 .view{display:none}.view.active{display:block}
-.game,.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px;margin:8px 0}
-.game.live,.card.live{border-left:4px solid #567794}
+.game,.card{background:var(--panel);border:1px solid #79402F;border-radius:12px;padding:10px;margin:8px 0}
+.game.live,.card.live{border-color:#C45129;border-left:4px solid var(--accent)}
 .gh,.top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
 .state,.sub{font-size:10px;color:var(--muted)}
 .teamrow{display:grid;grid-template-columns:24px 1fr auto;gap:7px;align-items:center;padding:2px 0}
@@ -35,7 +36,7 @@ header{position:sticky;top:0;background:var(--bg);z-index:10;padding-top:4px}
 .situation{border-top:1px solid var(--border);margin-top:7px;padding-top:6px;font-size:12px;font-weight:800}
 .lastplay{font-size:10px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pill{display:inline-block;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900}
-.win{background:var(--good);color:#07140c}.loss{background:#c94d4d}.push{background:#5d6a75}.upcoming{background:#d6dde4;color:#26303a}.livepill{border:1px solid #3b5368}
+.win{background:var(--good);color:#07140c}.loss{background:#c94d4d}.push{background:#5d6a75}.upcoming{background:#d6dde4;color:#26303a}.livepill{border:1px solid var(--accent);color:#FFD1BE;background:#40291F}
 .weekline{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin:9px 2px}
 .summary{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
 .sum{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:7px}
@@ -61,7 +62,7 @@ footer{text-align:center;color:var(--muted);font-size:9px;padding:16px}
 .filter{cursor:pointer;min-height:30px;white-space:nowrap}
 .status-pack{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-shrink:0}
 .status-button{border:0;padding:0;background:none;color:inherit;cursor:pointer}
-.status-pack .health{margin:0;gap:2px}.status-pack .hsq{width:7px;height:9px}
+.status-pack .health{margin:0;gap:3px}.status-pack .hsq{width:24px;height:24px;flex:0 0 24px;border-radius:2px}.status-pack .pill{min-height:24px;line-height:14px;padding:5px 8px}.status-pack .livepill{padding:4px 8px}
 .top>div:first-child{min-width:0}.top b{font-size:13px;line-height:1.4;display:block}
 .game-actions{display:flex;gap:10px;align-items:center}
 .gamecast{display:inline-block;color:#aacde6;font-size:11px;text-decoration:none;padding:7px 0}
@@ -87,12 +88,12 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
 .preview-tools{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap;font-size:11px}
 .preview-tools[hidden]{display:none}
-.preview-tools button,.connection-panel button{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;cursor:pointer}
+.preview-tools button{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;cursor:pointer}
 .preview-tools button[aria-pressed="true"]{border-color:var(--accent)}
 .sample-note{padding:10px 12px;margin:8px 0;border-left:3px solid var(--accent);background:#20314A;color:#CCD9EB;font-size:12px;line-height:1.6;border-radius:6px}
-.connection-panel{font-size:12px;color:var(--muted);line-height:1.6;margin:8px 0}
-.connection-panel summary{cursor:pointer}.connection-panel a{color:#B8D4E8}
-#connectionResults{white-space:pre-wrap;font:inherit}
+.record-win{color:var(--good)}.record-loss{color:#FF8585;font-weight:800}.record-push,.record-separator{color:#A6AFBA}
+.bet-matchup{display:flex;flex-wrap:wrap;align-items:center;gap:5px 8px}.bet-team{display:flex;align-items:center;gap:6px;min-width:0}.bet-team .logo{width:22px;height:22px;flex:0 0 22px}.bet-team .rank{margin:0;color:#FFD1BE}.matchup-at{font-size:10px;font-weight:500;color:var(--muted);margin-left:0}.bet-team-name{overflow-wrap:anywhere}.card .top{flex-wrap:wrap}.card .top>div:first-child{flex:1 1 220px}.card .top>.status-pack{max-width:100%;margin-left:auto}.leg .status-pack{max-width:none}.leg-matchup{margin:5px 0}.leg-matchup .bet-team{font-size:11px}.leg-matchup .logo{width:18px;height:18px;flex-basis:18px}
+@media(max-width:520px){.card .top>.status-pack{flex-basis:100%;margin-top:2px}.leg{grid-template-columns:1fr}.leg .status-pack{justify-content:flex-end}}
 </style>
 </head>
 <body>
@@ -109,26 +110,16 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 <button id="refreshBtn" type="button" aria-label="Refresh scores and bets" title="Refresh scores and bets">↻</button>
 </div>
 </header>
+<form id="betLogin" hidden><label>Private bets <input id="betPassword" type="password" autocomplete="current-password" placeholder="Access key" required></label> <button type="submit">Unlock</button><span id="loginStatus" role="status"></span></form><button id="betLogout" hidden type="button">Lock bets</button>
 <div id="storageStatus" role="status"></div><div class="preview-tools"><button id="sampleRankings" type="button" aria-pressed="false">Sample rankings: Off</button></div>
-<details class="connection-panel"><summary>Check ESPN connection</summary>
-<p>This check requests NFL and college scores directly from <b>this browser</b>, using the same single-date request format as the app. It does not use the preview server or save results.</p>
-<button id="connectionCheck" type="button">Test this browser</button><pre id="connectionResults" role="status" aria-live="polite"></pre>
-<p><b>On your phone:</b> refresh both NFL and College in this app. Fresh games/scores in both views confirm that app can read ESPN on that phone and network at that time. Try Wi-Fi and cellular separately.</p>
-<p>For a basic reachability check, open <a id="phoneNfl" target="_blank" rel="noopener">ESPN NFL data</a> or <a id="phoneCollege" target="_blank" rel="noopener">ESPN college data</a> on the phone. A page of structured text with an “events” section means the endpoint is reachable. That alone does not confirm the app’s cross-site requests work.</p>
-<p>This test checks the browser and network you are currently using. A successful response confirms access now; it does not guarantee future ESPN availability.</p>
-</details><main>
+<main>
 <section id="scoreboard" class="view active"></section>
 <section id="bets" class="view"></section>
 <section id="allgames" class="view"></section>
 </main>
-<footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.6.1</footer>
+<footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.7.0</footer>
 </div>
 <script>
-var ESPN={
-  college:'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard',
-  nfl:'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard'
-};
-var BET_URL='https://raw.githubusercontent.com/jporter0705/football-score-data/main/current-week.json';
 var S={collegeAll:[],collegeView:[],nfl:[],bets:[],week:null,lastUpdate:0,summaries:{}};
 var tab=localStorage.getItem('football-v4-tab')||'scoreboard';
 var sport=localStorage.getItem('football-v4-sport')||'college';
@@ -375,7 +366,7 @@ function legHtml(l,b){
   var st=legDisplayStatus(l,b),g=legGame(l,b),game=l.awayTeam&&l.homeTeam?l.awayTeam+' at '+l.homeTeam:'',detail=g?gameDetail(g):'Upcoming',h=itemHealth(l,g),pe=l.market==='player_prop'?propEval(l,g):null,stat=pe&&pe.value!=null?' · '+pe.value+(pe.target!=null?' / '+pe.target:''):'';
   var label=st==='won'?'Won':st==='lost'?'Lost':st==='push'?'Push':st==='live'?'Live':'Upcoming';
   h=st==='won'?5:st==='lost'?1:st==='push'?null:h;
-  return '<div class="leg"><div><div class="legmain">'+esc(l.selection||l.raw||'Leg')+((l.market==='spread'||l.market==='total')&&l.line!=null?' '+(l.market==='spread'&&Number(l.line)>0?'+':'')+l.line:'')+'</div><div class="legsub">'+esc([game,shortScore(g),detail].filter(Boolean).join(' · '))+stat+'</div>'+gamecastLink(l.sport||b.sport,l.espnEventId||b.espnEventId)+'</div><div class="status-pack">'+healthHtml(h)+'<span class="legstatus '+st+'">'+label+'</span></div></div>';
+  return '<div class="leg"><div><div class="legmain">'+esc(l.selection||l.raw||'Leg')+((l.market==='spread'||l.market==='total')&&l.line!=null?' '+(l.market==='spread'&&Number(l.line)>0?'+':'')+l.line:'')+'</div>'+(game?'<div class="leg-matchup">'+betMatchupHtml(Object.assign({sport:b.sport},l),g)+'</div>':'')+'<div class="legsub">'+esc([shortScore(g),detail].filter(Boolean).join(' · '))+stat+'</div>'+gamecastLink(l.sport||b.sport,l.espnEventId||b.espnEventId)+'</div><div class="status-pack">'+healthHtml(h)+'<span class="legstatus '+st+'">'+label+'</span></div></div>';
 }
 function toggleLegs(id){var x=document.getElementById(id);if(x)x.classList.toggle('open')}
 function betGameId(b){
@@ -390,8 +381,18 @@ function liveBetContext(g){
   var dd=sit.shortDownDistanceText||sit.downDistanceText||'',pt=sit.possessionText||'';
   return '<div class="situation">'+score+(dd?' · '+dd:'')+(pt&&dd.indexOf(pt)<0?' · '+pt:'')+'</div>'+(sit.lastPlay&&sit.lastPlay.text?'<div class="lastplay">Last: '+sit.lastPlay.text+'</div>':'');
 }
+function betTeamHtml(c,fallback,sp){
+  var tm=c&&c.team||{},rank=String(sp).toLowerCase()==='college'?collegeRank(c):null;
+  return '<span class="bet-team">'+(tm.logo?'<img class="logo" alt="" src="'+esc(tm.logo)+'">':'')+(rank?'<span class="rank">'+rank+'</span>':'')+'<span class="bet-team-name">'+esc(fallback||tm.shortDisplayName||tm.displayName||'Team')+'</span></span>';
+}
+function betMatchupHtml(b,g){
+  if(!b.awayTeam||!b.homeTeam)return '';
+  var t=g?teams(g):{};
+  return '<span class="bet-matchup">'+betTeamHtml(t.away,b.awayTeam,b.sport)+'<span class="matchup-at">at</span>'+betTeamHtml(t.home,b.homeTeam,b.sport)+'</span>';
+}
 function betCard(b){
   var g=findGame(b),gid=betGameId(b),title=b.awayTeam&&b.homeTeam?b.awayTeam+' at '+b.homeTeam:(b.structure==='teaser'?'Teaser':b.structure==='parlay'?'Parlay':'Wager');
+  title=betMatchupHtml(b,g)||esc(title);
   var id='m'+String(b.betId).replace(/[^a-zA-Z0-9]/g,''),legsId='l'+String(b.betId).replace(/[^a-zA-Z0-9]/g,'');
   var money=b.risk!=null?'$'+Number(b.risk).toFixed(0)+(b.toWin!=null?' → $'+Number(b.toWin).toFixed(2):''):'';
   var hasLegs=Array.isArray(b.legs)&&b.legs.length;
@@ -429,7 +430,7 @@ function renderBets(){
   var stateFilters=['all','live','upcoming','review','closed'].map(function(x){return '<button class="filter '+(betFilter===x?'active':'')+'" data-f="'+x+'">'+x.charAt(0).toUpperCase()+x.slice(1)+'</button>'}).join('');
   var sportFilters=[['all','All'],['nfl','NFL'],['college','College']].map(function(x){return '<button class="filter '+(betSport===x[0]?'active':'')+'" data-s="'+x[0]+'">'+x[1]+'</button>'}).join('');
   var dates=document.getElementById('betDates');dates.hidden=true;dates.textContent=S.week&&S.week.label?S.week.label:'Current week';
-  document.getElementById('bets').innerHTML='<div class="summary"><div class="sum"><b>'+selectedBets.length+'</b> bets</div><div class="sum"><b>'+w+'–'+l+'–'+p+'</b> W–L–P</div><div class="sum"><b>$'+risk.toFixed(0)+'</b> open risk</div><div class="sum '+(pl>=0?'plpos':'plneg')+'"><b>'+(pl>=0?'+':'')+'$'+pl.toFixed(2)+'</b> P/L</div></div><div class="bet-filters"><div class="filters" role="group" aria-label="Wager status">'+stateFilters+'</div><div class="filters sport-filters" role="group" aria-label="Wager sport">'+sportFilters+'</div></div>'+(cards.length?cards.map(betCard).join(''):'<div class="empty">No wagers match these filters.</div>');
+  document.getElementById('bets').innerHTML='<div class="summary"><div class="sum"><b>'+selectedBets.length+'</b> bets</div><div class="sum" aria-label="'+w+' wins, '+l+' losses, '+p+' pushes"><b><span class="record-win">'+w+'</span><span class="record-separator">–</span><span class="record-loss">'+l+'</span><span class="record-separator">–</span><span class="record-push">'+p+'</span></b> <span class="record-win">W</span><span class="record-separator">–</span><span class="record-loss">L</span><span class="record-separator">–</span><span class="record-push">P</span></div><div class="sum"><b>$'+risk.toFixed(0)+'</b> open risk</div><div class="sum '+(pl>=0?'plpos':'plneg')+'"><b>'+(pl>=0?'+':'')+'$'+pl.toFixed(2)+'</b> P/L</div></div><div class="bet-filters"><div class="filters" role="group" aria-label="Wager status">'+stateFilters+'</div><div class="filters sport-filters" role="group" aria-label="Wager sport">'+sportFilters+'</div></div>'+(cards.length?cards.map(betCard).join(''):'<div class="empty">No wagers match these filters.</div>');
   document.querySelectorAll('[data-f]').forEach(function(b){b.onclick=function(){betFilter=b.dataset.f;renderBets()}});
   document.querySelectorAll('[data-s]').forEach(function(b){b.onclick=function(){betSport=b.dataset.s;renderBets()}});
 }
@@ -456,11 +457,9 @@ function renderTabs(){
   document.getElementById('toolbar').style.display='flex';
   localStorage.setItem('football-v4-tab',tab);renderAll();
 }
-async function fetchBoard(sp,g){var j=await ScoreFeed.fetchWeek(sp,selectedWeek.start,selectedWeek.end,g||'80');if(j.error)throw Error(j.error);return j.events}
-
-function summaryUrl(sp,id){return 'https://site.api.espn.com/apis/site/v2/sports/football/'+(sp==='NFL'?'nfl':'college-football')+'/summary?event='+encodeURIComponent(id)}
+function summaryUrl(sp,id){return '/api/summary?sport='+(sp==='NFL'?'nfl':'college')+'&event='+encodeURIComponent(id)}
 async function fetchSummary(sp,id){
-  var r=await fetch(summaryUrl(sp,id),{cache:'no-store'});if(!r.ok)throw new Error('summary HTTP '+r.status);return r.json();
+  return jsonFetch(summaryUrl(sp,id));
 }
 async function refreshSummaries(){
   var wants={};
@@ -469,44 +468,10 @@ async function refreshSummaries(){
     if(b.market==='player_prop'){var g=findGame(b);if(g&&gs(g)!=='pre')want(b.sport,b.espnEventId)}
     (b.legs||[]).forEach(function(l){if(l.market==='player_prop'){var g=legGame(l,b);if(g&&gs(g)!=='pre')want(l.sport||b.sport,l.espnEventId||b.espnEventId)}})
   });
-  var jobs=Object.keys(wants).map(async function(k){try{S.summaries[k]=await fetchSummary(wants[k].sp,wants[k].id)}catch(e){console.warn('summary unavailable',k,e)}});
-  await Promise.all(jobs);
-}
-function reconcileImportedBets(j){
-  var revision=JSON.stringify([j.generatedAt||'',j.bets||[]]);
-  if(localStorage.getItem('football-v45-import-revision')!==revision){
-    var overrides=ov();(j.bets||[]).forEach(function(b){delete overrides[b.betId]});
-    localStorage.setItem('football-v4-overrides',JSON.stringify(overrides));
-    localStorage.setItem('football-v45-import-revision',revision);
-  }
-}
-async function fetchBets(){
-  var r=await fetch(BET_URL+'?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('bet feed HTTP '+r.status);
-  var j=await r.json();reconcileImportedBets(j);S.bets=j.bets||[];S.week=j.week||null;
-}
-async function refresh(){
-  if(document.hidden||refreshing)return;
-  refreshing=true;document.getElementById('refreshBtn').disabled=true;
-  var u=document.getElementById('updated');u.textContent='Refreshing…';
-  try{
-    var failures=[];
-    try{await fetchBets()}catch(e){failures.push('bets');console.warn(e)}
-    var out=await Promise.allSettled([fetchBoard('college','80'),fetchBoard('nfl')]);
-    if(out[0].status==='fulfilled')S.collegeAll=out[0].value;else failures.push('college scores');
-    if(out[1].status==='fulfilled')S.nfl=out[1].value;else failures.push('NFL scores');
-    if(group==='top25')S.collegeView=S.collegeAll.filter(top25Event);
-    else if(group==='80')S.collegeView=S.collegeAll;
-    else try{S.collegeView=await fetchBoard('college',group)}catch(e){failures.push('conference scores')}
-    await refreshSummaries();
-    if(!failures.length)S.lastUpdate=Date.now();u.textContent=failures.length?'Update delayed: '+failures.join(', '):'Updated now';renderAll();
-  }catch(e){
-    u.textContent='Update delayed';
-    if(!S.collegeAll.length&&!S.nfl.length)document.getElementById(tab).innerHTML='<div class="error">'+String(e.message||e)+'</div>';
-    console.error(e);
-  }finally{refreshing=false;document.getElementById('refreshBtn').disabled=false}
+  var failed=false,jobs=Object.keys(wants).map(async function(k){try{S.summaries[k]=await fetchSummary(wants[k].sp,wants[k].id)}catch(e){failed=true;console.warn('summary unavailable',k,e)}});
+  await Promise.all(jobs);return !failed;
 }
 </script>
-<script src="score-feed.js"></script>
 <script src="weeks.js"></script>
 <script>
 // Presentation-only samples: never add these events to S or to saved history.
@@ -529,24 +494,13 @@ document.getElementById('sampleRankings').onclick=function(){sampleRankings=!sam
 if(sampleRankings){sport='college';group='80';tab='scoreboard'}
 updateSampleButton();
 if(!localPreview&&!sampleRankings)document.getElementById('sampleRankings').parentElement.hidden=true;
-function directScoreUrl(source){return ESPN[source]+'?dates='+dateKey(new Date())+'&limit=300'+(source==='college'?'&groups=80':'')}
-
-document.getElementById('phoneNfl').href=directScoreUrl('nfl');
-document.getElementById('phoneCollege').href=directScoreUrl('college');
-document.getElementById('connectionCheck').onclick=async function(){
-  var button=this;button.disabled=true;var target=document.getElementById('connectionResults'),results={nfl:'Checking…',college:'Checking…'};
-  function paint(){target.textContent='NFL: '+results.nfl+'\nCollege: '+results.college}
-  paint();await Promise.allSettled(['nfl','college'].map(async function(source){try{var j=await jsonFetch(directScoreUrl(source));if(!Array.isArray(j.events))throw Error('response did not contain scoreboard data');results[source]='Connected · '+j.events.length+' games returned'+(j.events.length?'':' (connection works, but no games for this date range)')}catch(e){results[source]='Failed in this browser · '+e.message}paint()}));button.disabled=false;
-};
-
 </script>
 <script>
 document.querySelectorAll('.tab').forEach(function(b){b.onclick=function(){tab=b.dataset.tab;renderTabs()}});
-document.getElementById('refreshBtn').onclick=refresh;
-document.addEventListener('visibilitychange',function(){if(!document.hidden&&Date.now()-S.lastUpdate>5000)refresh()});
-window.addEventListener('focus',function(){if(!document.hidden&&Date.now()-S.lastUpdate>5000)refresh()});
+document.getElementById('refreshBtn').onclick=function(){refresh('full')};
+document.addEventListener('visibilitychange',function(){if(!document.hidden)automaticRefresh()});
 if(location.hostname!=='127.0.0.1'&&location.hostname!=='localhost'&&'serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(function(){});
-startHistory();setInterval(function(){if(!document.hidden)refresh()},30000);
+startHistory();setInterval(automaticRefresh,30000);
 </script>
 </body>
 </html>

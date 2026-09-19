@@ -2,3 +2,5 @@
 /data/bet-history/
 /data/score-history/
 /preview.*.log
+/node_modules/
+/.env*

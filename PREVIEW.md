@@ -16,22 +16,19 @@ pruned. Scores cannot be captured while both the server and browser are closed;
 backfill requires ESPN to continue serving those dates. Browser storage alone
 is not a permanent backup; keep the local disk archive.
 
-The preview uses local BetOnline data. The existing hosted-app path still reads
-the remote BetOnline feed and ESPN directly; no remote data or hosting has been
-changed by this preview server. The hosted app discovers historical betting
-weeks through the data feed's index.json, and fetches weeks/YYYY-MM-DD.json.
-Full ESPN score snapshots captured by this server remain local; they are not
-automatically uploaded by deploying the app. This local server does not deploy itself.
+The preview uses local BetOnline data. The hosted app uses Netlify score archives
+and authenticated private bet storage; see PRIVATE-STORAGE.md for the approved
+cutover procedure. No remote data or hosting is changed by this preview server.
+Local score and bet archives are not automatically uploaded by deploying the app.
 
-Grading order: final BetOnline result, supported full-game ESPN final result,
-then manual result only for unresolved final games. Props, partial-game bets,
-teasers and uncertain parlay reductions require review. A parlay with a losing
+Grading order: final BetOnline result, saved manual correction, then supported
+ESPN final result. Structured props and adjusted teaser spreads can auto-grade;
+unsupported props, partial-game bets and uncertain parlay reductions require review. A parlay with a losing
 leg loses; all winning legs win; all pushed legs push. Mixed wins/pushes require
 the actual reduced profit if graded manually. BetOnline always supersedes it.
 
-Run `node test.cjs` for the settlement and date-range checks.
+Run `npm test` for the settlement, date-range, refresh and private API checks.
 
-Validation limitation (2026-09-16): ESPN returned Access Denied from this task's
-server, and the in-app browser reported blocked by client. Real current/prior
-score snapshots could not be fetched here. The preview shows source-specific
-delays instead of invented scores. The real bet files remain available.
+Local validation (2026-09-19): current and prior-week ESPN scores were available
+in the local preview with network access, including live bet-linked game details.
+Hosted Blobs and secure sessions require a separately approved development deploy.

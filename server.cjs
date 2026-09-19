@@ -19,9 +19,12 @@ function settled(b){return ['WON','LOST','PUSH','VOID','CANCELLED','CANCELED'].i
 function feed(k){
   const current=read(path.join(dataRoot,'current-week.json'),null),incoming=current&&current.week&&current.week.start===k?current:read(path.join(dataRoot,'weeks',k+'.json'),null);
   const file=path.join(betArchiveRoot,k+'.json'),old=read(file,null);if(!incoming)return old;
+  // A newly imported local archive is newer than the legacy export source.
+  // Do not replace its official results, leg details or provenance on each poll.
+  const stale=old?.generatedAt&&incoming.generatedAt&&Date.parse(old.generatedAt)>Date.parse(incoming.generatedAt);
   const bets=new Map((old?.bets||[]).map(b=>[String(b.betId),b]));
-  for(const b of incoming.bets||[]){const previous=bets.get(String(b.betId))||{},merged={...previous,...b};if(previous.legs){const legs=previous.legs.slice();(b.legs||[]).forEach((l,i)=>{const index=l.legNumber!=null?legs.findIndex(x=>x.legNumber===l.legNumber):i;if(index<0)legs.push(l);else legs[index]={...legs[index],...l}});merged.legs=legs}if(settled(previous)&&!settled(b)){merged.betOnlineStatus=previous.betOnlineStatus;merged.toWin=previous.toWin;merged.risk=previous.risk}bets.set(String(b.betId),merged)}
-  const result={...old,...incoming,bets:[...bets.values()]};if(JSON.stringify(old)!==JSON.stringify(result))write(file,result);return result;
+  for(const b of incoming.bets||[]){const previous=bets.get(String(b.betId))||{};if(stale&&previous.betId)continue;const merged={...previous,...b};if(previous.legs){const legs=previous.legs.slice();(b.legs||[]).forEach((l,i)=>{const index=l.legNumber!=null?legs.findIndex(x=>x.legNumber===l.legNumber):i;if(index<0)legs.push(l);else{const prior=legs[index];legs[index]={...prior,...l};if(settled({betOnlineStatus:prior.status})&&!settled({betOnlineStatus:l.status}))legs[index].status=prior.status}});merged.legs=legs}if(settled(previous)&&!settled(b)){merged.betOnlineStatus=previous.betOnlineStatus;merged.toWin=previous.toWin;merged.risk=previous.risk;merged.sourceSnapshot=previous.sourceSnapshot;merged.gradedDate=previous.gradedDate}bets.set(String(b.betId),merged)}
+  const result={...old,...incoming,generatedAt:stale?old.generatedAt:incoming.generatedAt,bets:[...bets.values()]};if(JSON.stringify(old)!==JSON.stringify(result))write(file,result);return result;
 }
 function snapshot(k){const scores=read(path.join(archiveRoot,k+'.json'),{week:week(new Date(k+'T12:00:00')),nfl:[],college:[],sources:{}});const bets=feed(k);return {...scores,bets:bets?bets.bets:[],sources:{...scores.sources,...(bets?{bets:{updatedAt:bets.generatedAt||new Date().toISOString()}}:{})}}}
 async function refreshSource(k,source){
@@ -43,6 +46,14 @@ const server=http.createServer(async(req,res)=>{
     const url=new URL(req.url,'http://127.0.0.1');
     if(req.method==='POST'&&req.headers.origin&&!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(req.headers.origin))return send(res,403,{error:'Local requests only'});
     if(url.pathname==='/api/weeks')return send(res,200,{weeks:keys()});
+    if(url.pathname==='/api/conference'){
+      const k=url.searchParams.get('week'),g=url.searchParams.get('group');if(!valid(k||'')||!/^\d{1,3}$/.test(g||''))return send(res,400,{error:'Invalid conference or week'});
+      const w=week(new Date(k+'T12:00:00')),data=await scoreFeed.fetchWeek('college',w.start,w.end,g);return send(res,200,{items:data.events,updatedAt:data.updatedAt,error:data.error});
+    }
+    if(url.pathname==='/api/summary'){
+      const sport=url.searchParams.get('sport'),id=url.searchParams.get('event');if(!['nfl','college'].includes(sport)||!/^\d{1,12}$/.test(id||''))return send(res,400,{error:'Invalid event'});
+      const response=await fetch('https://site.api.espn.com/apis/site/v2/sports/football/'+(sport==='nfl'?'nfl':'college-football')+'/summary?event='+id,{signal:AbortSignal.timeout(12000)});if(!response.ok)throw Error('Summary delayed');return send(res,200,await response.json());
+    }
     const m=url.pathname.match(/^\/api\/week\/(\d{4}-\d{2}-\d{2})(?:\/(nfl|college|bets))?$/);
     if(m&&valid(m[1])){if(!m[2])return send(res,200,snapshot(m[1]));if(req.method!=='POST')return send(res,405,{error:'POST required'});try{return send(res,200,await refreshSource(m[1],m[2]))}catch(e){const h=snapshot(m[1]);if(m[2]!=='bets'&&h[m[2]].length)return send(res,200,{items:h[m[2]],updatedAt:h.sources[m[2]]?.updatedAt,error:e.message});throw e}}
     const allowed={'/':'index.html','/index.html':'index.html','/weeks.js':'weeks.js','/score-feed.js':'score-feed.js','/manifest.webmanifest':'manifest.webmanifest','/sw.js':'sw.js','/icon-192.png':'icon-192.png','/icon-512.png':'icon-512.png'};

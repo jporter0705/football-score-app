@@ -1,0 +1,14 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const files=new Map(),root=path.resolve('/test-app'),data=path.resolve(root,'../football-score-data'),key='2026-09-15';
+const archive=path.join(root,'data/bet-history',key+'.json'),source=path.join(data,'current-week.json');
+const fakeFS={mkdirSync(){},readFileSync(f){if(!files.has(f))throw Object.assign(Error('missing'),{code:'ENOENT'});return files.get(f);},writeFileSync:(f,v)=>files.set(f,v),renameSync:(a,b)=>{files.set(b,files.get(a));files.delete(a);}};
+const ctx={require:n=>n==='node:fs'?fakeFS:n==='./score-feed.js'?{}:require(n),__dirname:root,process:{env:{}},console};
+vm.createContext(ctx);vm.runInContext(fs.readFileSync('server.cjs','utf8').split('const server=http.createServer')[0],ctx);
+const seed=(f,v)=>files.set(f,JSON.stringify(v));
+seed(archive,{week:{start:key},generatedAt:'2026-09-19T20:00:00Z',bets:[{betId:'a',betOnlineStatus:'WON',risk:20,toWin:19,legs:[{legNumber:1,status:'WON',raw:'saved detail'}]}]});
+seed(source,{week:{start:key},generatedAt:'2026-09-18T20:00:00Z',bets:[{betId:'a',betOnlineStatus:'PENDING',legs:[]},{betId:'b',betOnlineStatus:'PENDING'}]});
+let h=ctx.feed(key);assert.equal(h.bets.length,2);assert.equal(h.bets[0].betOnlineStatus,'WON');assert.equal(h.bets[0].legs.length,1);
+h=ctx.feed(key);assert.equal(h.bets.length,2,'repeat imports are idempotent');
+seed(source,{week:{start:key},generatedAt:'2026-09-20T20:00:00Z',bets:[{betId:'a',betOnlineStatus:'PENDING',legs:[{legNumber:1,status:'PENDING'}]},{betId:'b',betOnlineStatus:'LOST'}]});
+h=ctx.feed(key);assert.equal(h.bets[0].betOnlineStatus,'WON');assert.equal(h.bets[0].legs[0].status,'WON');assert.equal(h.bets[0].legs[0].raw,'saved detail');assert.equal(h.bets[1].betOnlineStatus,'LOST');
+console.log('PASS overlapping exports: deduplication, new IDs from older files, result updates, retained settled parents and legs');

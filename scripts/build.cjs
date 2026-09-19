@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
-const assets = ['index.html','weeks.js','score-feed.js','sw.js','manifest.webmanifest','icon-192.png','icon-512.png'];
+const assets = ['index.html','weeks.js','sw.js','manifest.webmanifest','icon-192.png','icon-512.png'];
 // Netlify can leave metadata from a prior build in the publish folder. Build a
 // clean directory each time so only the explicitly listed public assets ship.
 fs.rmSync(output, {recursive:true, force:true});
