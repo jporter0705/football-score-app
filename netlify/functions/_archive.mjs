@@ -20,7 +20,12 @@ export function settled(b){return ['WON','LOST','PUSH','VOID','CANCELLED','CANCE
 export function mergeBets(oldItems=[],incoming=[]){
   const m=new Map(oldItems.map(b=>[String(b.betId),b]));
   for(const b of incoming){const prev=m.get(String(b.betId))||{},merged={...prev,...b};
-    if(prev.legs){const legs=prev.legs.slice();(b.legs||[]).forEach((l,i)=>{const n=l.legNumber!=null?legs.findIndex(x=>x.legNumber===l.legNumber):i;if(n<0)legs.push(l);else{const prior=legs[n];legs[n]={...prior,...l};if(settled({betOnlineStatus:prior.status})&&!settled({betOnlineStatus:l.status}))legs[n].status=prior.status;}});merged.legs=legs;}
+    if(Array.isArray(b.legs)){
+      if(b.replaceLegs) merged.legs=b.legs.map(x=>({...x}));
+      else if(prev.legs){const legs=prev.legs.slice();b.legs.forEach((l,i)=>{let n=l.legNumber!=null?legs.findIndex(x=>x.legNumber===l.legNumber):i;if(n<0&&l.legNumber!=null)n=Number(l.legNumber)-1;if(n<0)legs.push(l);else{const prior=legs[n]||{};legs[n]={...prior,...l};if(settled({betOnlineStatus:prior.status})&&!settled({betOnlineStatus:l.status}))legs[n].status=prior.status;}});merged.legs=legs;}
+      else merged.legs=b.legs;
+    }
+    delete merged.replaceLegs;
     if(settled(prev)&&!settled(b)){merged.betOnlineStatus=prev.betOnlineStatus;merged.toWin=prev.toWin;merged.risk=prev.risk;merged.sourceSnapshot=prev.sourceSnapshot;merged.gradedDate=prev.gradedDate;}
     m.set(String(b.betId),merged);
   }return [...m.values()];
