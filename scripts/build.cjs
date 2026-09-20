@@ -8,4 +8,6 @@ const assets = ['index.html','import.html','weeks.js','sw.js','manifest.webmanif
 fs.rmSync(output, {recursive:true, force:true});
 fs.mkdirSync(output, {recursive:true});
 for (const name of assets) fs.copyFileSync(path.join(root,name),path.join(output,name));
-console.log('Built v4.7.1: '+assets.length+' public app assets.');
+const imports = path.join(root,'imports');
+if (fs.existsSync(imports)) fs.cpSync(imports,path.join(output,'imports'),{recursive:true});
+console.log('Built app: '+assets.length+' public assets plus named imports.');
