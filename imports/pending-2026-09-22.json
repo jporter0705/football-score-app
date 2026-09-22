@@ -1,0 +1,53 @@
+{
+  "week": {"start":"2026-09-22"},
+  "bets": [
+    {
+      "betId":"998337311-1",
+      "acceptedDate":"2026-09-21T08:35:00-07:00",
+      "sport":"College",
+      "structure":"straight",
+      "market":"spread",
+      "awayTeam":"Kansas State Wildcats",
+      "homeTeam":"Cincinnati Bearcats",
+      "selection":"Cincinnati Bearcats",
+      "line":6.5,
+      "eventDate":"09/26/2026",
+      "eventStart":"2026-09-26T19:00:00-04:00",
+      "risk":40,
+      "toWin":36.36,
+      "status":"pending",
+      "description":"Cincinnati Bearcats +6.5 over Kansas State Wildcats",
+      "rawWager":"FOOTBALL - 346 Cincinnati +6½ -110"
+    },
+    {
+      "betId":"998746613-1",
+      "acceptedDate":"2026-09-22T13:31:00-07:00",
+      "sport":"NFL",
+      "structure":"teaser",
+      "risk":50,
+      "toWin":41.67,
+      "status":"pending",
+      "description":"Teaser (2 Teams)",
+      "legs":[
+        {"legNumber":1,"sport":"NFL","market":"spread","awayTeam":"Seattle Seahawks","homeTeam":"Washington Commanders","selection":"Seattle Seahawks","line":0,"eventDate":"09/27/2026","eventStart":"2026-09-27T13:00:00-04:00","raw":"Seattle Seahawks pk -105 For Game","status":"pending"},
+        {"legNumber":2,"sport":"NFL","market":"spread","awayTeam":"Los Angeles Chargers","homeTeam":"Buffalo Bills","selection":"Buffalo Bills","line":-1,"eventDate":"09/27/2026","eventStart":"2026-09-27T13:00:00-04:00","raw":"Buffalo Bills -1 -114 For Game","status":"pending"}
+      ]
+    },
+    {
+      "betId":"998747082-1",
+      "acceptedDate":"2026-09-22T13:34:00-07:00",
+      "sport":"NFL",
+      "structure":"teaser",
+      "risk":35,
+      "toWin":64.22,
+      "status":"pending",
+      "description":"Teaser (4 Teams)",
+      "legs":[
+        {"legNumber":1,"sport":"NFL","market":"spread","awayTeam":"Philadelphia Eagles","homeTeam":"Chicago Bears","selection":"Chicago Bears","line":11.5,"eventDate":"09/28/2026","eventStart":"2026-09-28T20:15:00-04:00","raw":"Chicago Bears +11½ -110 For Game","status":"pending"},
+        {"legNumber":2,"sport":"NFL","market":"spread","awayTeam":"Seattle Seahawks","homeTeam":"Washington Commanders","selection":"Seattle Seahawks","line":0,"eventDate":"09/27/2026","eventStart":"2026-09-27T13:00:00-04:00","raw":"Seattle Seahawks pk -105 For Game","status":"pending"},
+        {"legNumber":3,"sport":"NFL","market":"spread","awayTeam":"Los Angeles Chargers","homeTeam":"Buffalo Bills","selection":"Buffalo Bills","line":0,"eventDate":"09/27/2026","eventStart":"2026-09-27T13:00:00-04:00","raw":"Buffalo Bills pk -114 For Game","status":"pending"},
+        {"legNumber":4,"sport":"NFL","market":"spread","awayTeam":"Arizona Cardinals","homeTeam":"San Francisco 49ers","selection":"San Francisco 49ers","line":-2,"eventDate":"09/27/2026","eventStart":"2026-09-27T16:05:00-04:00","raw":"San Francisco 49ers -2 +100 For Game","status":"pending"}
+      ]
+    }
+  ]
+}
