@@ -11,10 +11,13 @@ for (const name of assets) fs.copyFileSync(path.join(root,name),path.join(output
 const imports = path.join(root,'imports');
 if (fs.existsSync(imports)) fs.cpSync(imports,path.join(output,'imports'),{recursive:true});
 
-// Production-only UI overrides. Keeping these small transforms here avoids
-// rewriting the large single-file app when making focused display/sort fixes.
+// Load the production enhancement layer directly from the built HTML. This is
+// deterministic across desktop/iOS and keeps the service worker out of HTML rewriting.
 const indexPath = path.join(output,'index.html');
 let html = fs.readFileSync(indexPath,'utf8');
+if (!html.includes('enhancements.js')) html = html.replace('</body>','<script src="/enhancements.js?v=4.7.4"></script></body>');
+
+// Production-only compatibility overrides retained for legacy imported wager shapes.
 const overrides = `
 function legRequirement(l){
   var sel=l.selection||l.player||l.raw||'Leg',p=l.player||sel;
@@ -25,14 +28,7 @@ function legRequirement(l){
   if(l.market==='total'&&l.line!=null)return sel+' '+l.line;
   return l.raw||sel;
 }
-function legHtml(l,b){
-  var st=legDisplayStatus(l,b),g=legGame(l,b),game=l.awayTeam&&l.homeTeam?l.awayTeam+' at '+l.homeTeam:'',detail=g?gameDetail(g):'Upcoming',h=itemHealth(l,g),pe=l.market==='player_prop'?propEval(l,g):null,stat=pe&&pe.value!=null?' · '+pe.value+(pe.target!=null?' / '+pe.target:''):'';
-  var label=st==='won'?'Won':st==='lost'?'Lost':st==='push'?'Push':st==='live'?'Live':'Upcoming';h=st==='won'?5:st==='lost'?1:st==='push'?null:h;
-  return '<div class="leg"><div><div class="legmain">'+esc(legRequirement(l))+'</div>'+(game?'<div class="leg-matchup">'+betMatchupHtml(Object.assign({sport:b.sport},l),g)+'</div>':'')+'<div class="legsub">'+esc([shortScore(g),detail].filter(Boolean).join(' · '))+stat+'</div>'+gamecastLink(l.sport||b.sport,l.espnEventId||b.espnEventId)+'</div><div class="status-pack">'+healthHtml(h)+'<span class="legstatus '+st+'">'+label+'</span></div></div>';
-}
-function betGames(b){
-  var out=[],seen={};function add(g){if(g&&!seen[String(g.id)]){seen[String(g.id)]=1;out.push(g)}}add(findGame(b));(b.legs||[]).forEach(function(l){add(legGame(l,b))});return out;
-}
+function betGames(b){var out=[],seen={};function add(g){if(g&&!seen[String(g.id)]){seen[String(g.id)]=1;out.push(g)}}add(findGame(b));(b.legs||[]).forEach(function(l){add(legGame(l,b))});return out}
 function betKickoff(b){var gs=betGames(b),ts=gs.map(function(g){return Date.parse(g.date||0)||0}).filter(Boolean);return ts.length?Math.min.apply(null,ts):0}
 function betGameKey(b){var gs=betGames(b).sort(function(a,c){var ad=Date.parse(a.date||0)||0,cd=Date.parse(c.date||0)||0;return ad-cd||String(a.id).localeCompare(String(c.id))});return gs.length?String(gs[0].id):String(b.espnEventId||'~')}
 function sortBets(a,b){
@@ -47,4 +43,4 @@ const pos=html.lastIndexOf(marker);
 if(pos<0) throw new Error('index.html script marker not found');
 html=html.slice(0,pos)+overrides+html.slice(pos);
 fs.writeFileSync(indexPath,html);
-console.log('Built app: '+assets.length+' public assets plus named imports and UI overrides.');
+console.log('Built app: '+assets.length+' public assets plus named imports and integrated UI enhancements.');
