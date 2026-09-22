@@ -11,8 +11,6 @@ if (fs.existsSync(imports)) fs.cpSync(imports,path.join(output,'imports'),{recur
 
 const indexPath = path.join(output,'index.html');
 let html = fs.readFileSync(indexPath,'utf8');
-
-// Production-only compatibility overrides retained for legacy imported wager shapes.
 const overrides = `<script>
 function legRequirement(l){
   var sel=l.selection||l.player||l.raw||'Leg',p=l.player||sel;
@@ -34,8 +32,8 @@ function sortBets(a,b){
 }
 </script>`;
 
-// Load compatibility code first, then the enhancement layer directly from HTML.
-// The service worker no longer rewrites navigation responses.
-html = html.replace('</body>',overrides+'<script src="/enhancements.js?v=4.7.4"></script></body>');
+// Enhancements are now explicit HTML dependencies, not service-worker mutations.
+// Keep the small production sort compatibility layer after enhancements so it wins.
+html = html.replace('</body>','<script src="/enhancements.js?v=4.7.4"></script>'+overrides+'</body>');
 fs.writeFileSync(indexPath,html);
 console.log('Built app: '+assets.length+' public assets plus named imports and integrated UI enhancements.');
