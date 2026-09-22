@@ -267,9 +267,11 @@ function findAthleteStat(summary,player,statType){
   if(!summary||!player)return null;var target=norm(player),out=null;
   (summary.boxscore&&summary.boxscore.players||[]).forEach(function(team){
     (team.statistics||[]).forEach(function(group){
-      var names=(group.names||[]).map(function(x){return String(x).toLowerCase()});
-      var idx=-1,keys={rushing_yards:['rushing yards','rush yds'],receiving_yards:['receiving yards','rec yds'],passing_yards:['passing yards','pass yds'],receptions:['receptions','rec'],passing_interceptions:['interceptions'],passing_tds_gte:['passing touchdowns','passing tds','td']};
-      (keys[statType]||[]).some(function(k){idx=names.indexOf(k);return idx>=0});
+      var idx=-1,keys={rushing_yards:['rushingyards','rushing yards','rush yds'],receiving_yards:['receivingyards','receiving yards','rec yds'],passing_yards:['passingyards','passing yards','pass yds'],receptions:['receptions','rec'],passing_interceptions:['interceptions'],passing_tds_gte:['passingtouchdowns','passing touchdowns','passing tds','td']};
+      [group.keys,group.names,group.descriptions,group.labels].some(function(columns){
+        var names=(columns||[]).map(function(x){return String(x).toLowerCase()});
+        return (keys[statType]||[]).some(function(k){idx=names.indexOf(k);return idx>=0});
+      });
       if(idx<0)return;
       (group.athletes||[]).forEach(function(a){var nm=norm(a.athlete&&(a.athlete.displayName||a.athlete.shortName||a.athlete.fullName));if(nm===target||nm.indexOf(target)>=0||target.indexOf(nm)>=0){var v=a.stats&&a.stats[idx];if(v!=null&&v!=='')out=Number(String(v).split('/')[0])}});
     });
