@@ -3,22 +3,17 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
 const assets = ['index.html','import.html','enhancements.js','weeks.js','sw.js','manifest.webmanifest','icon-192.png','icon-512.png'];
-// Netlify can leave metadata from a prior build in the publish folder. Build a
-// clean directory each time so only the explicitly listed public assets ship.
 fs.rmSync(output, {recursive:true, force:true});
 fs.mkdirSync(output, {recursive:true});
 for (const name of assets) fs.copyFileSync(path.join(root,name),path.join(output,name));
 const imports = path.join(root,'imports');
 if (fs.existsSync(imports)) fs.cpSync(imports,path.join(output,'imports'),{recursive:true});
 
-// Load the production enhancement layer directly from the built HTML. This is
-// deterministic across desktop/iOS and keeps the service worker out of HTML rewriting.
 const indexPath = path.join(output,'index.html');
 let html = fs.readFileSync(indexPath,'utf8');
-if (!html.includes('enhancements.js')) html = html.replace('</body>','<script src="/enhancements.js?v=4.7.4"></script></body>');
 
 // Production-only compatibility overrides retained for legacy imported wager shapes.
-const overrides = `
+const overrides = `<script>
 function legRequirement(l){
   var sel=l.selection||l.player||l.raw||'Leg',p=l.player||sel;
   if(l.market==='moneyline')return sel+' — Moneyline';
@@ -37,10 +32,10 @@ function sortBets(a,b){
   if(sa===1){var ta=betKickoff(a),tb=betKickoff(b);if(ta!==tb)return (ta||Infinity)-(tb||Infinity);var ka=betGameKey(a),kb=betGameKey(b);if(ka!==kb)return ka.localeCompare(kb);return String(a.betId||'').localeCompare(String(b.betId||''))}
   var da=Date.parse(a.gradedDate||a.acceptedDate||0)||0,db=Date.parse(b.gradedDate||b.acceptedDate||0)||0;return sa===2?db-da:da-db;
 }
-`;
-const marker='</script>';
-const pos=html.lastIndexOf(marker);
-if(pos<0) throw new Error('index.html script marker not found');
-html=html.slice(0,pos)+overrides+html.slice(pos);
+</script>`;
+
+// Load compatibility code first, then the enhancement layer directly from HTML.
+// The service worker no longer rewrites navigation responses.
+html = html.replace('</body>',overrides+'<script src="/enhancements.js?v=4.7.4"></script></body>');
 fs.writeFileSync(indexPath,html);
 console.log('Built app: '+assets.length+' public assets plus named imports and integrated UI enhancements.');
