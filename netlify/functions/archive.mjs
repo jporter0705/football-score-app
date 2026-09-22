@@ -10,7 +10,8 @@ export default async (request)=>{
     // Never expose legacy bets embedded in score snapshots to anonymous readers.
     h.bets=unlocked?(privateBets?.bets||h.bets||[]):[];
     h.betsLocked=!unlocked;h.sources={...h.sources};delete h.sources.bets;
-    if(unlocked)h.sources.bets=privateBets?{updatedAt:privateBets.generatedAt,error:null}:{error:'Private import needed'};
+    // No imported wagers for a week is a healthy empty state, not a refresh error.
+    if(unlocked)h.sources.bets=privateBets?{updatedAt:privateBets.generatedAt,error:null}:{updatedAt:null,error:null,empty:true};
     return json(h);
   }catch(e){return json({error:e.message||String(e)},500);}
 };
