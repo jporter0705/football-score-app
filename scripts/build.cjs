@@ -21,6 +21,35 @@ function legRequirement(l){
   if(l.market==='total'&&l.line!=null)return sel+' '+l.line;
   return l.raw||sel;
 }
+
+// ESPN competitors wrap school metadata under competitor.team. Normalize against that object.
+function canonicalTeamMatch(c,name){
+  var t=c&&c.team?c.team:c||{},vals=[t.location,t.displayName,t.shortDisplayName,t.name,t.abbreviation].filter(Boolean),target=schoolNameVariants(name);
+  for(var i=0;i<vals.length;i++){var vv=schoolNameVariants(vals[i]);for(var a=0;a<vv.length;a++)for(var b=0;b<target.length;b++)if(vv[a]===target[b])return true}
+  return false;
+}
+
+// Prefer the imported sport, but if that metadata is wrong, safely recover from the other ESPN pool.
+// Only exactMatchGame results are accepted, so canonical fallback still has to resolve to one matchup.
+function resolveAcrossPools(item,preferredSport){
+  var preferred=eventPoolForSport(preferredSport),g=exactMatchGame(preferred,item);if(g)return{game:g,sport:preferredSport};
+  var other=preferredSport==='NFL'?S.collegeAll:S.nfl,otherSport=preferredSport==='NFL'?'College':'NFL',alt=exactMatchGame(other,item);
+  return alt?{game:alt,sport:otherSport}:null;
+}
+function findGame(b){
+  var r=resolveAcrossPools(b,b.sport||'College');
+  if(r&&b.sport!==r.sport)b.sport=r.sport;
+  return r?r.game:null;
+}
+function legGame(leg,parent){
+  var sp=leg.sport||parent.sport||'College',item=Object.assign({sport:sp},leg);
+  if(!item.espnEventId&&parent.structure==='same_game_parlay')item.espnEventId=parent.espnEventId;
+  var r=resolveAcrossPools(item,sp);
+  if(r&&leg.sport&&leg.sport!==r.sport)leg.sport=r.sport;
+  return r?r.game:null;
+}
+function itemMatchesEvent(item,parent,e,sp){var id=resolvedEventId(item,parent);return id?String(id)===String(e.id):false}
+
 function betGames(b){var out=[],seen={};function add(g){if(g&&!seen[String(g.id)]){seen[String(g.id)]=1;out.push(g)}}add(findGame(b));(b.legs||[]).forEach(function(l){add(legGame(l,b))});return out}
 function betKickoff(b){var gs=betGames(b),ts=gs.map(function(g){return Date.parse(g.date||0)||0}).filter(Boolean);return ts.length?Math.min.apply(null,ts):0}
 function betGameKey(b){var gs=betGames(b).sort(function(a,c){var ad=Date.parse(a.date||0)||0,cd=Date.parse(c.date||0)||0;return ad-cd||String(a.id).localeCompare(String(c.id))});return gs.length?String(gs[0].id):String(b.espnEventId||'~')}
@@ -32,8 +61,7 @@ function sortBets(a,b){
 }
 </script>`;
 
-// Enhancements are now explicit HTML dependencies, not service-worker mutations.
-// Keep the small production sort compatibility layer after enhancements so it wins.
-html = html.replace('</body>','<script src="/enhancements.js?v=4.7.4"></script>'+overrides+'</body>');
+// Enhancements are explicit production dependencies. The compatibility layer follows them so shared resolvers win.
+html = html.replace('</body>','<script src="/enhancements.js?v=4.7.5"></script>'+overrides+'</body>');
 fs.writeFileSync(indexPath,html);
 console.log('Built app: '+assets.length+' public assets plus named imports and integrated UI enhancements.');
