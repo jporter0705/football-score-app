@@ -1,3 +1,4 @@
+import { normalizeParentSport } from './_bet-sport.mjs';
 import { json,listWeeks,readWeek,validWeek } from './_archive.mjs';
 import { authorized,readBets,betStore } from './_private.mjs';
 
@@ -8,7 +9,7 @@ export default async (request)=>{
     if(!validWeek(week))return json({error:'Invalid Tuesday week start'},400);
     const h=await readWeek(week),unlocked=authorized(request),privateBets=unlocked?await readBets(week):null;
     // Never expose legacy bets embedded in score snapshots to anonymous readers.
-    h.bets=unlocked?(privateBets?.bets||h.bets||[]):[];
+    h.bets=unlocked?(privateBets?.bets||h.bets||[]).map(normalizeParentSport):[];
     h.betsLocked=!unlocked;h.sources={...h.sources};delete h.sources.bets;
     // No imported wagers for a week is a healthy empty state, not a refresh error.
     if(unlocked)h.sources.bets=privateBets?{updatedAt:privateBets.generatedAt,error:null}:{updatedAt:null,error:null,empty:true};

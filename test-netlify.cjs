@@ -41,6 +41,48 @@ const request=(route,method='GET',body,headers={})=>new Request('https://example
   response=await archive(request('archive?week='+key,'GET',null,{cookie}));const data=await response.json();assert.equal(data.bets.length,2);assert.equal(data.bets[0].betOnlineStatus,'WON');assert.equal(data.bets[0].legs[0].raw,'preserved');
   response=await archive(request('archive?week='+key));assert.equal((await response.json()).bets.length,0);
   assert.equal((await bets(request('bets','POST',{week,bets:[{betId:'x'},{betId:'x'}]},headers))).status,400);
+
+  const sports=await moduleFor('_bet-sport'),chatImport=(await moduleFor('chat-import')).default;
+  const two={betId:'nfl-two',sport:'College',league:'NCAA',type:'Teaser',risk:50,toWin:41.67,legs:[{sport:'NFL',selection:'Seattle',line:-1,status:'PENDING'},{sport:'NFL',selection:'Buffalo',line:-1,status:'PENDING'}]};
+  const four={...two,betId:'nfl-four',risk:35,toWin:64.22,legs:[...two.legs,{sport:'NFL',selection:'Chicago',line:11.5},{sport:'NFL',selection:'San Francisco',line:-2}]};
+  const college={...two,betId:'college-eleven',legs:Array.from({length:11},(_,i)=>({sport:'College',selection:'College '+i,line:i}))};
+  const originals=JSON.stringify([two,four,college]);
+  for(const b of [two,four]){
+    const normalized=sports.normalizeParentSport(b);
+    assert.equal(normalized.sport,'NFL');assert.equal(normalized.league,'NFL');
+    assert.deepEqual(normalized.legs,b.legs);assert.equal(normalized.risk,b.risk);assert.equal(normalized.toWin,b.toWin);
+  }
+  assert.equal(sports.normalizeParentSport(college).sport,'College');
+  for(const legs of [[{sport:'NFL'},{sport:'College'}],[{sport:'NFL'},{}],[{sport:'NFL'},null],[]]){
+    const b={...two,legs};assert.equal(sports.normalizeParentSport(b),b,'Mixed/unknown legs must not override parent');
+  }
+  assert.equal(sports.normalizeParentSport({...two,legs:[{league:'NFL'},{raw:'Football - NFL - example'}]}).sport,'NFL');
+  assert.equal(sports.normalizeParentSport({...two,sport:'NFL',legs:[{raw:'Football - NCAA - example'},{league:'NCAAF'}]}).sport,'College');
+  assert.equal(sports.ownSport({raw:'NFL and NCAA mixed'}),'');
+  assert.equal(sports.normalizeParentSport({sport:'College'}).sport,'College');
+  assert.equal(JSON.stringify([two,four,college]),originals,'Classification must not mutate inputs');
+  // Existing misclassified records are corrected on authenticated reads without storage writes.
+  await privateApi.updateBlob(privateApi.betStore(),'week/'+key,()=>({week,bets:[two,four,college],generatedAt:'2026-09-26T16:04:39.976Z'}));
+  const storageBefore=JSON.stringify(await privateApi.readBets(key)),revisionBefore=revision;
+  const corrected=await (await archive(request('archive?week='+key,'GET',null,{cookie}))).json();
+  assert.deepEqual(corrected.bets.map(b=>b.sport),['NFL','NFL','College']);
+  assert.deepEqual(corrected.bets.map(b=>b.legs.length),[2,4,11]);
+  assert.equal(corrected.bets.filter(b=>b.sport==='NFL').length,2,'NFL filter receives both teasers');
+  assert.equal(JSON.stringify(await privateApi.readBets(key)),storageBefore);
+  assert.equal(revision,revisionBefore,'Archive classification never writes private storage');
+  assert.deepEqual((await (await archive(request('archive?week='+key))).json()).bets,[]);
+  // Future chat imports correct the parent and preserve individual leg evidence.
+  response=await chatImport(request('chat-import','POST',{week,bets:[two,four,college]},{cookie}));
+  assert.equal(response.status,200);
+  const imported=(await privateApi.readBets(key)).bets;
+  assert.deepEqual(imported.map(b=>b.sport),['NFL','NFL','College']);
+  assert.deepEqual(imported.map(b=>b.league),['NFL','NFL','NCAA']);
+  assert.deepEqual(imported.map(b=>b.legs.length),[2,4,11]);
+  assert.equal(imported[0].risk,50);assert.equal(imported[1].toWin,64.22);
+  assert.equal(imported[0].legs[0].selection,'Seattle');assert.equal(imported[0].legs[0].line,-1);
+  assert.equal((await chatImport(request('chat-import','POST',{week,bets:[two]}))).status,401);
+  console.log('PASS unanimous leg classification, NFL filter records, mixed/unknown guards, immutable archive repair and future chat imports');
+
   const before=fetchCount;await refresh(request('refresh?week='+key,'POST'));assert.equal(fetchCount-before,14);
   const now=fetchCount;await live(request('live?week='+key,'POST'));assert.equal(fetchCount-now,4);
   const stored=await api.readWeek(key);assert.equal(stored.nfl.length,2);
