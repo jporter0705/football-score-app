@@ -29,6 +29,6 @@ ctx.fetch=async(url,options)=>{requests.push([url,options]);return {ok:true,json
   const prior=ctx.previousWeek(week);ctx.selectedWeek=prior;ctx.lastRefreshAttempt=0;let called=false;ctx.jsonFetch=async()=>{called=true};await ctx.refresh('live');assert.equal(called,false);
   ctx.selectedWeek=week;ctx.historyWeeks[week.start].bets=[{betId:'secret'}];ctx.remember();assert.doesNotMatch(storage.get('football-history-v1'),/secret/);
   ctx.mergeArchive({...snapshot(),betsLocked:true});assert.equal(ctx.historyWeeks[week.start].bets.length,0);
-  let late;ctx.jsonFetch=()=>new Promise(r=>late=r);const pending=ctx.loadHostedWeek(week.start);ctx.sessionGeneration++;late({...snapshot(),bets:[{betId:'late-secret'}]});await pending;assert.equal(ctx.historyWeeks[week.start].bets.length,0,'late response cannot restore locked bets');
+  let late;ctx.jsonFetch=()=>new Promise(r=>late=r);const pending=ctx.loadHostedWeek(week.start,true);ctx.sessionGeneration++;late({...snapshot(),bets:[{betId:'late-secret'}]});await pending;assert.equal(ctx.historyWeeks[week.start].bets.length,0,'late response cannot restore locked bets');
   console.log('PASS hosted startup, cache-first display, manual/live routing, 30s deduplication, hidden and historical tabs, delayed recovery, private cache exclusion');
 })().catch(e=>{console.error(e);process.exitCode=1});

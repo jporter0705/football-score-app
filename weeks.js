@@ -6,14 +6,21 @@ function bettingWeek(now){
 }
 function isoDay(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function previousWeek(w){var d=new Date(w.start+'T12:00:00');d.setDate(d.getDate()-7);return bettingWeek(d)}
-function loadHistory(){try{return JSON.parse(localStorage.getItem('football-history-v1')||'{}')}catch(e){return {}}}
+var knownWeekKeys=[],weekTouches={},hostedWeekRequests=new Map(),weekLoadedAt={};
+function loadHistory(){try{var raw=JSON.parse(localStorage.getItem('football-history-v1')||'{}'),snapshots=raw.schemaVersion===2?raw.snapshots||{}:raw;knownWeekKeys=(raw.schemaVersion===2?raw.weeks:Object.keys(snapshots))||[];if(location.hostname==='127.0.0.1'||location.hostname==='localhost')return snapshots;var out={};Object.keys(snapshots).sort().slice(-3).forEach(function(k){out[k]=snapshots[k];out[k].bets=[]});return out}catch(e){return {}}}
 var historyWeeks=loadHistory(),selectedWeek=bettingWeek(),localPreview=location.hostname==='127.0.0.1'||location.hostname==='localhost',refreshToken=0;
 function blankWeek(w){return {week:w,bets:[],nfl:[],college:[],sources:{}}}
-function remember(){try{localStorage.setItem('football-history-v1',JSON.stringify(historyWeeks,function(k,v){return !localPreview&&(k==='bets'||k==='summaries')?undefined:v}))}catch(e){document.getElementById('storageStatus').textContent='Browser cache is full; the hosted archive remains available.'}}
+function rememberHistory(){try{
+  Object.keys(historyWeeks).forEach(function(k){if(knownWeekKeys.indexOf(k)<0)knownWeekKeys.push(k)});
+  if(!localPreview){Object.keys(historyWeeks).sort(function(a,b){return (weekTouches[b]||0)-(weekTouches[a]||0)}).filter(function(k){return k!==selectedWeek.start}).slice(2).forEach(function(k){delete historyWeeks[k];delete weekLoadedAt[k]})}
+  var data=localPreview?historyWeeks:{schemaVersion:2,weeks:knownWeekKeys,snapshots:historyWeeks};
+  localStorage.setItem('football-history-v1',JSON.stringify(data,function(k,v){return !localPreview&&(k==='bets'||k==='summaries')?undefined:v}));
+}catch(e){var n=document.getElementById('storageStatus');if(n)n.textContent='Browser cache unavailable; saved weeks remain on the server.'}}
+function remember(){rememberHistory()}
 function weekDates(){return selectedWeek.start.replace(/-/g,'')+'-'+selectedWeek.end.replace(/-/g,'')}
 function boardFilter(){var h=historyWeeks[selectedWeek.start]||{},cached=h.conferences&&h.conferences[group];S.collegeView=group==='top25'?S.collegeAll.filter(top25Event):group==='80'?S.collegeAll:cached?cached.map(function(e){return S.collegeAll.find(function(x){return x.id===e.id})||e}):S.collegeAll.filter(function(e){return (comp(e).competitors||[]).some(function(c){return String(c.team&&c.team.conferenceId)===group})})}
 async function refreshConference(){if(group==='80'||group==='top25')return;var w=Object.assign({},selectedWeek),g=group,h=historyWeeks[w.start]||(historyWeeks[w.start]=blankWeek(w));try{var j=await jsonFetch('/api/conference?week='+w.start+'&group='+encodeURIComponent(g));j.events=j.items||[];h=historyWeeks[w.start]||h;h.conferences=h.conferences||{};var merged=new Map((h.conferences[g]||[]).map(function(e){return [e.id,e]}));j.events.forEach(function(e){merged.set(e.id,e)});h.conferences[g]=Array.from(merged.values());h.conferenceError=j.error?'Conference scores delayed':null;remember()}catch(e){h.conferenceError='Conference scores delayed'}if(selectedWeek.start===w.start&&group===g){boardFilter();renderAll();showSourceStatus()}}
-function showWeek(){var h=historyWeeks[selectedWeek.start]||blankWeek(selectedWeek);S.week=selectedWeek;S.bets=h.bets||[];S.nfl=h.nfl||[];S.collegeAll=h.college||[];boardFilter();var keys=Object.keys(historyWeeks);[bettingWeek(),previousWeek(bettingWeek()),selectedWeek].forEach(function(w){if(keys.indexOf(w.start)<0)keys.push(w.start)});document.getElementById('weekSelect').innerHTML=keys.sort().reverse().map(function(k){var w=bettingWeek(new Date(k+'T12:00:00'));return '<option value="'+k+'"'+(k===selectedWeek.start?' selected':'')+'>'+w.label+(k===bettingWeek().start?' · Current':'')+'</option>'}).join('');renderAll();showSourceStatus()}
+function showWeek(){var h=historyWeeks[selectedWeek.start]||blankWeek(selectedWeek);S.week=selectedWeek;S.bets=h.bets||[];S.nfl=h.nfl||[];S.collegeAll=h.college||[];boardFilter();var keys=Array.from(new Set(knownWeekKeys.concat(Object.keys(historyWeeks))));[bettingWeek(),previousWeek(bettingWeek()),selectedWeek].forEach(function(w){if(keys.indexOf(w.start)<0)keys.push(w.start)});document.getElementById('weekSelect').innerHTML=keys.sort().reverse().map(function(k){var w=bettingWeek(new Date(k+'T12:00:00'));return '<option value="'+k+'"'+(k===selectedWeek.start?' selected':'')+'>'+w.label+(k===bettingWeek().start?' · Current':'')+'</option>'}).join('');renderAll();showSourceStatus()}
 var lastRefreshAttempt=0,historyReady=false,refreshError=null,sessionGeneration=0;
 function showSourceStatus(){
   var h=historyWeeks[selectedWeek.start]||blankWeek(selectedWeek),sources=h.sources||{};
@@ -29,15 +36,21 @@ function showSourceStatus(){
 async function jsonFetch(url,options){var response=await fetch(url,Object.assign({cache:'no-store',signal:AbortSignal.timeout(25000)},options));if(!response.ok)throw Error('HTTP '+response.status);return response.json()}
 function mergeBets(old,incoming){var map=new Map((old||[]).map(function(b){return [String(b.betId),b]}));(incoming||[]).forEach(function(b){var prev=map.get(String(b.betId))||{},merged=Object.assign({},prev,b);if(prev.legs){var legs=prev.legs.slice();(b.legs||[]).forEach(function(l,i){var index=l.legNumber!=null?legs.findIndex(function(x){return x.legNumber===l.legNumber}):i;if(index<0)legs.push(l);else legs[index]=Object.assign({},legs[index],l)});merged.legs=legs}if(bookResult(prev)&&!bookResult(b)){merged.betOnlineStatus=prev.betOnlineStatus;merged.toWin=prev.toWin;merged.risk=prev.risk}map.set(String(b.betId),merged)});return Array.from(map.values())}
 function reconcileImportedBets(j){var overrides=ov();(j.bets||[]).forEach(function(b){if(bookResult(b)){delete overrides[b.betId];delete overrides[b.betId+':profit']}});localStorage.setItem('football-v4-overrides',JSON.stringify(overrides))}
-function mergeArchive(h){if(!h||!h.week||!h.week.start)return;var old=historyWeeks[h.week.start]||blankWeek(h.week);historyWeeks[h.week.start]=Object.assign({},old,h,{bets:h.betsLocked?[]:mergeBets(old.bets,h.bets||[]),conferences:old.conferences||h.conferences});reconcileImportedBets(historyWeeks[h.week.start]);remember()}
-async function loadHostedWeek(key){
-  var generation=sessionGeneration,h=await jsonFetch('/api/archive?week='+encodeURIComponent(key));
-  if(generation!==sessionGeneration)return historyWeeks[key];
-  if(h.betsLocked){clearPrivateBets();document.getElementById('betLogin').hidden=false;document.getElementById('betLogout').hidden=true;}
-  mergeArchive(h);if(selectedWeek.start===key)showWeek();return historyWeeks[key];
+function mergeArchive(h){if(!h||!h.week||!h.week.start)return;var old=historyWeeks[h.week.start]||blankWeek(h.week);historyWeeks[h.week.start]=Object.assign({},old,h,{bets:h.betsLocked?[]:(h.bets||[]),conferences:old.conferences||h.conferences});reconcileImportedBets(historyWeeks[h.week.start]);remember()}
+async function loadHostedWeek(key,force){
+  weekTouches[key]=Date.now();
+  if(!force&&historyWeeks[key]&&Date.now()-(weekLoadedAt[key]||0)<30000){if(selectedWeek.start===key)showWeek();return historyWeeks[key]}
+  var generation=sessionGeneration,requestKey=generation+':'+key;
+  if(hostedWeekRequests.has(requestKey))return hostedWeekRequests.get(requestKey);
+  var job=(async function(){var h=await jsonFetch('/api/archive?week='+encodeURIComponent(key));
+    if(generation!==sessionGeneration)return historyWeeks[key];
+    if(h.betsLocked){clearPrivateBets();document.getElementById('betLogin').hidden=false;document.getElementById('betLogout').hidden=true;}
+    weekLoadedAt[key]=Date.now();mergeArchive(h);if(selectedWeek.start===key)showWeek();return historyWeeks[key];
+  })();hostedWeekRequests.set(requestKey,job);
+  try{return await job}finally{hostedWeekRequests.delete(requestKey)}
 }
-function clearPrivateBets(){Object.keys(historyWeeks).forEach(function(k){historyWeeks[k].bets=[];if(historyWeeks[k].sources)delete historyWeeks[k].sources.bets;});S.bets=[];S.summaries={};remember();}
-async function refreshHostedWeek(w,mode){await jsonFetch((mode==='live'?'/api/live':'/api/refresh')+'?week='+encodeURIComponent(w.start),{method:'POST'});return loadHostedWeek(w.start)}
+function clearPrivateBets(){Object.keys(historyWeeks).forEach(function(k){historyWeeks[k].bets=[];if(historyWeeks[k].sources)delete historyWeeks[k].sources.bets;});S.bets=[];S.summaries={};weekLoadedAt={};remember();}
+async function refreshHostedWeek(w,mode){await jsonFetch((mode==='live'?'/api/live':'/api/refresh')+'?week='+encodeURIComponent(w.start),{method:'POST'});return loadHostedWeek(w.start,true)}
 async function refreshWeek(w,token,mode){
   var key=w.start,h=historyWeeks[key]||(historyWeeks[key]=blankWeek(w));h.sources=h.sources||{};
   if(!localPreview){try{await refreshHostedWeek(w,mode);refreshError=null;S.lastUpdate=Date.now()}catch(e){refreshError='Archive update delayed';remember()}if(key===selectedWeek.start&&token===refreshToken)showWeek();return}
@@ -80,17 +93,18 @@ function bindLeagueControls(){document.querySelectorAll('[data-games]').forEach(
 async function startHistory(){
   showWeek();renderTabs();if(!localPreview)await checkSession();
   if(localPreview){try{var index=await jsonFetch('/api/weeks');await Promise.all(index.weeks.map(async function(k){var h=await jsonFetch('/api/week/'+k);var old=historyWeeks[k]||{};historyWeeks[k]=Object.assign({},old,h,{bets:mergeBets(old.bets,h.bets)})}))}catch(e){document.getElementById('storageStatus').textContent='Local archive unavailable: '+e.message}}
-  else{try{var index=await jsonFetch('/api/archive');await Promise.all((index.weeks||[]).map(async function(k){if(k===selectedWeek.start||k===previousWeek(bettingWeek()).start)await loadHostedWeek(k);else if(!historyWeeks[k])historyWeeks[k]=blankWeek(bettingWeek(new Date(k+'T12:00:00')))}))}catch(e){refreshError='Saved data: archive temporarily unavailable';showSourceStatus()}}
+  else{try{var index=await jsonFetch('/api/archive');knownWeekKeys=index.weeks||[];await loadHostedWeek(selectedWeek.start)}catch(e){refreshError='Saved data: archive temporarily unavailable';showSourceStatus()}}
   remember();showWeek();historyReady=true;await refresh('full');
-  var prev=previousWeek(bettingWeek());if(!historyWeeks[prev.start]||!historyWeeks[prev.start].nfl.length||!historyWeeks[prev.start].college.length){if(localPreview)await refreshWeek(prev,refreshToken);else try{await loadHostedWeek(prev.start)}catch(e){}}
+  // Older weeks are fetched only when selected.
 }
 document.getElementById('weekSelect').onchange=async function(){
   selectedWeek=bettingWeek(new Date(this.value+'T12:00:00'));var key=selectedWeek.start;refreshToken++;refreshError=null;showWeek();
   if(!localPreview){try{await loadHostedWeek(key);if(selectedWeek.start!==key)return;showWeek()}catch(e){}}
-  if(selectedWeek.start===key)refresh('full');
+  if(selectedWeek.start===key&&key===bettingWeek().start)refresh('live');
 };
 async function checkSession(){try{var status=await jsonFetch('/api/session');document.getElementById('betLogin').hidden=status.authenticated;document.getElementById('betLogout').hidden=!status.authenticated;}catch(e){document.getElementById('betLogin').hidden=false;}}
-document.getElementById('betLogin').onsubmit=async function(e){e.preventDefault();var input=document.getElementById('betPassword');try{await jsonFetch('/api/session',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key:input.value})});input.value='';document.getElementById('loginStatus').textContent='';await checkSession();await loadHostedWeek(selectedWeek.start);showWeek();refresh('full');}catch(e){document.getElementById('loginStatus').textContent=' Unable to unlock bets';}};
+document.getElementById('betLogin').onsubmit=async function(e){e.preventDefault();var input=document.getElementById('betPassword');try{await jsonFetch('/api/session',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key:input.value})});input.value='';document.getElementById('loginStatus').textContent='';sessionGeneration++;weekLoadedAt={};await checkSession();await loadHostedWeek(selectedWeek.start,true);showWeek();refresh('full');}catch(e){document.getElementById('loginStatus').textContent=' Unable to unlock bets';}};
 document.getElementById('betLogout').onclick=async function(){try{var r=await fetch('/api/session',{method:'DELETE'});if(!r.ok)throw Error();sessionGeneration++;clearPrivateBets();showWeek();await checkSession();}catch(e){document.getElementById('storageStatus').textContent='Unable to lock bets; retry.'}};
 // Purge legacy public-feed bet caches from persistent browser storage on hosted startup.
 if(!localPreview){Object.keys(historyWeeks).forEach(function(k){historyWeeks[k].bets=[];});remember();}
+

@@ -262,7 +262,7 @@ function gameProgress(g){
   var elapsed=(Math.min(p,4)-1)*900+(900-Math.min(sec,900));if(p>4)elapsed=3600+(p-5)*600+(600-Math.min(sec,600));
   return Math.max(0,Math.min(1,elapsed/3600));
 }
-function summaryFor(id){return id?S.summaries[String(id)]||null:null}
+function summaryFor(id,sp){return S.summaries[(sp==='NFL'?'NFL':'College')+':'+id]||S.summaries[id]||null}
 function findAthleteStat(summary,player,statType){
   if(!summary||!player)return null;var target=norm(player),out=null;
   (summary.boxscore&&summary.boxscore.players||[]).forEach(function(team){
@@ -285,7 +285,7 @@ function anytimeTdHit(summary,player){
 }
 function isReversibleStat(type){return type==='rushing_yards'||type==='receiving_yards'||type==='passing_yards'||type==='return_yards'}
 function propEval(item,g){
-  var type=item.propType||item.gradingType||'',sum=summaryFor(item.espnEventId||(g&&g.id)),line=Number(item.line),state=g?gs(g):'pre';
+  var type=item.propType||item.gradingType||'',sum=summaryFor(item.espnEventId||(g&&g.id),item.sport),line=Number(item.line),state=g?gs(g):'pre';
   if(type==='anytime_td'){
     if(anytimeTdHit(sum,item.player))return{status:'won',locked:true,value:1,target:1};
     if(state==='post')return{status:'lost',locked:true,value:0,target:1};
@@ -508,5 +508,7 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden)auto
 if(location.hostname!=='127.0.0.1'&&location.hostname!=='localhost'&&'serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(function(){});
 startHistory();setInterval(automaticRefresh,30000);
 </script>
-</body>
+<p style=""text-align:center""><a href=""/recovery.html"" style=""color:#8fb0c9"">Bet backups</a></p></body>
 </html>
+
+

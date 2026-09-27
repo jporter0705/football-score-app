@@ -1,0 +1,35 @@
+const assert=require('node:assert/strict'),h=require('./test-support-netlify.cjs')();
+const key='2026-09-22',week={start:key},privateKey='football-private-bets/week/'+key;
+function game(id,away,home){return{id,date:'2026-09-27T17:00:00Z',competitions:[{competitors:[{homeAway:'away',team:{displayName:away,shortDisplayName:away,name:away.split(' ').at(-1)}},{homeAway:'home',team:{displayName:home,shortDisplayName:home,name:home.split(' ').at(-1)}}]}]}}
+(async()=>{
+  const api=await h.moduleFor('_archive'),priv=await h.moduleFor('_private'),normal=await h.moduleFor('_bet-normalize'),backup=await h.moduleFor('_bet-backups'),chat=(await h.moduleFor('chat-import')).default,recovery=(await h.moduleFor('bet-backups')).default,archive=(await h.moduleFor('archive')).default;
+  const cookie='football_session='+priv.session(),headers={cookie,origin:'https://example.netlify.app'},scores={week,nfl:[game('11','Philadelphia Eagles','Chicago Bears'),game('12','Kansas City Chiefs','Miami Dolphins')],college:[],sources:{}};
+  await api.writeWeek(key,scores);
+  for(const leg of [null,3,'invalid',[]])assert.throws(()=>normal.validateRecords([normal.canonicalFields({legs:[leg]})]),/Invalid bet legs/);
+  const incoming={bet_id:'sgp',type:'Same Game Parlay',sport:'NFL',away_team:'Miami Dolphins',home_team:'Kansas City Chiefs',risk:'$20.00',to_win:'100',legs:[{leg_number:1,market:'player_prop',player:'T. Kelce',prop_type:'receiving_yards',side:'gte',line:40,raw:'Player stats - T. Kelce 40+ Receiving yds'}]};
+  const copy=JSON.stringify(incoming),n=normal.normalizeBet(incoming,scores);assert.equal(n.espnEventId,'12');assert.equal(n.awayTeam,'Kansas City Chiefs');assert.equal(n.legs[0].espnEventId,'12');assert.equal(n.legs[0].propType,'receiving_yards');assert.equal(n.legs[0].line,39.5);assert.equal(n.legs[0].side,'over');assert.equal(n.risk,20);assert.equal(JSON.stringify(incoming),copy);
+  assert.equal(normal.normalizeBet(n,scores).legs[0].line,39.5,'normalization is idempotent');
+  assert.equal(normal.normalizeBet({betId:'straight',sport:'NFL',market:'moneyline',selection:'Chicago Bears'},scores).espnEventId,'11');
+  assert.equal(normal.normalizeBet({betId:'ambiguous',sport:'NFL',market:'moneyline',selection:'Chicago Bears'},{...scores,nfl:[...scores.nfl,game('13','Chicago Bears','Other Team')]}).espnEventId,undefined,'ambiguous teams remain unmatched');
+  const prior={...n,description:'Good description',betOnlineStatus:'WON',status:'WON',legs:[{...n.legs[0],status:'WON'}]};
+  const merged=api.mergeBets([prior],normal.reconcileBets([prior],[{betId:'sgp',espn_event_id:null,description:null,status:'PENDING',betOnlineStatus:'PENDING',legs:[]}],scores))[0];
+  assert.equal(merged.espnEventId,'12');assert.equal(merged.description,prior.description);assert.equal(merged.legs[0].status,'WON');assert.equal(merged.status,'WON');
+  let r=await chat(h.request('chat-import','POST',{week,bets:[incoming]},headers));assert.equal(r.status,200);assert.equal(h.state.memory.get(privateKey).data.bets.length,1);
+  r=await chat(h.request('chat-import','POST',{week,bets:[incoming]},headers));assert.equal(r.status,200);assert.equal(h.state.memory.get(privateKey).data.bets.length,1,'repeat import does not duplicate');
+  const snapshots=[...h.state.memory.entries()].filter(([k])=>k.startsWith('football-private-bets/backup/'));assert.equal(snapshots.length,2);assert.equal(snapshots[0][1].data.snapshot.bets.length,0);assert.equal(snapshots[1][1].data.snapshot.bets.length,1);
+  const saved=JSON.stringify(h.state.memory.get(privateKey));h.state.onSet=k=>k.includes('/backup/')?{modified:false}:null;
+  r=await chat(h.request('chat-import','POST',{week,bets:[{betId:'blocked'}]},headers));assert.equal(r.status,503);assert.equal(JSON.stringify(h.state.memory.get(privateKey)),saved,'failed backup prevents live write');h.state.onSet=null;
+  let inject=true;h.state.onSet=(k,data)=>{if(inject&&k===privateKey){inject=false;const old=h.state.memory.get(k);old.data.bets.push({betId:'parallel'});old.etag='concurrent';return{modified:false}}};
+  r=await chat(h.request('chat-import','POST',{week,bets:[{betId:'third'}]},headers));assert.equal(r.status,200);assert.deepEqual(h.state.memory.get(privateKey).data.bets.map(b=>b.betId).sort(),['parallel','sgp','third']);h.state.onSet=null;
+  assert.equal((await recovery(h.request('bet-backups?week='+key))).status,401);
+  assert.equal((await recovery(h.request('bet-backups?week='+key,'GET',null,{...headers,origin:'https://evil.example'}))).status,403);
+  const list=await(await recovery(h.request('bet-backups?week='+key,'GET',null,headers))).json();assert(list.nextCursor,'backup listing is paginated');
+  const backupId=snapshots[1][1].data.backupId,preview=await(await recovery(h.request('bet-backups?week='+key+'&backup='+encodeURIComponent(backupId),'GET',null,headers))).json();
+  r=await recovery(h.request('bet-backups','POST',{week:key,backupId,expectedRevision:'stale',confirmRestore:true},headers));assert.equal(r.status,409,'stale restore cannot overwrite a newer import');
+  r=await recovery(h.request('bet-backups','POST',{week:key,backupId,expectedRevision:preview.currentRevision},headers));assert.equal(r.status,400);
+  r=await recovery(h.request('bet-backups','POST',{week:key,backupId,expectedRevision:preview.currentRevision,confirmRestore:true},headers));assert.equal(r.status,200);assert.equal(h.state.memory.get(privateKey).data.bets.length,1);
+  const restoreCopy=[...h.state.memory.values()].find(x=>x.data.reason==='restore');assert.equal(restoreCopy.data.snapshot.bets.length,3,'restoring creates its own recovery point');
+  const anon=await(await archive(h.request('archive?week='+key))).json();assert.equal(anon.bets.length,0);assert(!JSON.stringify(anon).includes('backupId'));
+  assert([...h.state.memory.keys()].filter(k=>k.includes('/backup/')).every(k=>k.startsWith('football-private-bets/')));
+  console.log('PASS import normalization, unique/reversed matchup repair, repeat imports, settled metadata, failed-backup safety, CAS conflicts, protected/paginated recovery, stale restore rejection, restore undo point');
+})().catch(e=>{console.error(e);process.exitCode=1});

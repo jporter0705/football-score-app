@@ -54,6 +54,18 @@ score snapshots are available only to authenticated readers during transition.
 
 ## Validation
 
+### Backup and recovery additions
+
+Imports and restores save immutable snapshots in the private bet store before
+changing a week. Backup failure aborts the write. `/api/bet-backups` requires an
+unlocked browser session and same-origin requests. Its GET supports paginated
+listing and snapshot preview; POST requires the selected backup, an explicit
+`confirmRestore: true`, and `expectedRevision` from preview. A stale revision
+rejects the restore, and the pre-restore state is backed up first. Open
+`recovery.html` using the app's Bet backups link. Backups are not automatically
+deleted. Cross-week duplicate cleanup through `/api/bets` now requires explicit
+`reconcileWeeks: true`; destination data is saved before source cleanup.
+
 `npm test` covers grading, historical dates, browser refresh behavior, source
 failures, session security, anonymous redaction, import validation, preservation
 of settled bets/legs, and write-conflict retries. Netlify tests use an in-memory

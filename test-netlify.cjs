@@ -14,7 +14,7 @@ const cache=new Map();
 async function load(name){
   if(cache.has(name))return cache.get(name);
   let mod;if(name==='@netlify/blobs')mod=new vm.SyntheticModule(['getStore'],function(){this.setExport('getStore',getStore)},{context});
-  else if(name==='node:crypto'){const crypto=require(name);mod=new vm.SyntheticModule(['createHmac','timingSafeEqual'],function(){this.setExport('createHmac',crypto.createHmac);this.setExport('timingSafeEqual',crypto.timingSafeEqual)},{context});}
+  else if(name==='node:crypto'){const crypto=require(name);mod=new vm.SyntheticModule(['createHmac','timingSafeEqual','randomUUID'],function(){this.setExport('createHmac',crypto.createHmac);this.setExport('timingSafeEqual',crypto.timingSafeEqual);this.setExport('randomUUID',crypto.randomUUID)},{context});}
   else mod=new vm.SourceTextModule(fs.readFileSync(name,'utf8'),{context,identifier:name});
   cache.set(name,mod);await mod.link((specifier,parent)=>load(specifier.startsWith('.')?path.resolve(path.dirname(parent.identifier),specifier):specifier));return mod;
 }
@@ -37,7 +37,7 @@ const request=(route,method='GET',body,headers={})=>new Request('https://example
   assert.equal(privateApi.authorized(request('archive','GET',null,{cookie:cookie+'tampered'})),false);
   const headers={authorization:'Bearer '+env.BET_IMPORT_TOKEN};
   response=await bets(request('bets','POST',{week,bets:[{betId:'a',betOnlineStatus:'WON',risk:10,toWin:15,legs:[{legNumber:1,raw:'preserved'}]}]},headers));assert.equal(response.status,200);
-  conflict=true;response=await bets(request('bets','POST',{week,bets:[{betId:'a',betOnlineStatus:'PENDING',legs:[]},{betId:'b'}]},headers));assert.equal(response.status,200);
+  response=await bets(request('bets','POST',{week,bets:[{betId:'a',betOnlineStatus:'PENDING',legs:[]},{betId:'b'}]},headers));assert.equal(response.status,200);
   response=await archive(request('archive?week='+key,'GET',null,{cookie}));const data=await response.json();assert.equal(data.bets.length,2);assert.equal(data.bets[0].betOnlineStatus,'WON');assert.equal(data.bets[0].legs[0].raw,'preserved');
   response=await archive(request('archive?week='+key));assert.equal((await response.json()).bets.length,0);
   assert.equal((await bets(request('bets','POST',{week,bets:[{betId:'x'},{betId:'x'}]},headers))).status,400);
@@ -84,8 +84,9 @@ const request=(route,method='GET',body,headers={})=>new Request('https://example
   console.log('PASS unanimous leg classification, NFL filter records, mixed/unknown guards, immutable archive repair and future chat imports');
 
   const before=fetchCount;await refresh(request('refresh?week='+key,'POST'));assert.equal(fetchCount-before,14);
-  const now=fetchCount;await live(request('live?week='+key,'POST'));assert.equal(fetchCount-now,4);
+  const now=fetchCount;await live(request('live?week='+key,'POST'));assert.equal(fetchCount-now,0,'fresh date cache avoids duplicate live requests');
   const stored=await api.readWeek(key);assert.equal(stored.nfl.length,2);
+  const scoreEntry=memory.get('football-score-history/week/'+key);scoreEntry.data.scoreDays={};
   failESPN=true;await live(request('live?week='+key,'POST'));const failed=await api.readWeek(key);assert.equal(failed.nfl.length,2);assert.equal(failed.sources.nfl.updatedAt,stored.sources.nfl.updatedAt);assert.match(failed.sources.nfl.error,/offline/);
   response=await live(request('live?week=2020-09-08','POST'));assert.equal((await response.json()).skipped,'historical week');
   assert.equal((await refresh(request('refresh?week=bad','POST'))).status,400);

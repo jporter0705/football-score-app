@@ -14,7 +14,15 @@ export function bettingWeek(now=new Date(new Date().toLocaleString('en-US',{time
 export function validWeek(k){return /^\d{4}-\d{2}-\d{2}$/.test(k)&&bettingWeek(new Date(k+'T12:00:00')).start===k;}
 export function blankWeek(k){return {week:bettingWeek(new Date(k+'T12:00:00')),nfl:[],college:[],bets:[],sources:{}};}
 export async function readWeek(k){return (await store().get('week/'+k,{type:'json',consistency:'strong'}))||blankWeek(k);}
-export async function writeWeek(k,value){return updateBlob(store(),'week/'+k,old=>{const next={...old,...value,sources:{...old?.sources}};for(const name of ['nfl','college']){const incoming=value.sources?.[name],prior=old?.sources?.[name];if(!prior?.updatedAt||!incoming?.updatedAt||incoming.updatedAt>=prior.updatedAt){next[name]=mergeGames(old?.[name],value[name]);if(incoming)next.sources[name]=incoming;}else next[name]=old[name];}return next;});}
+export async function writeWeek(k,value){return updateBlob(store(),'week/'+k,old=>{
+  const next={...old,...value,sources:{...old?.sources},scoreDays:{...old?.scoreDays}};
+  for(const name of ['nfl','college']){
+    const incoming=value.sources?.[name],prior=old?.sources?.[name];
+    if(!prior?.updatedAt||!incoming?.updatedAt||incoming.updatedAt>=prior.updatedAt){next[name]=mergeGames(old?.[name],value.gameUpdates?.[name]||value[name]);if(incoming)next.sources[name]=incoming;}else next[name]=old[name];
+    const dates={...old?.scoreDays?.[name]};for(const [day,meta] of Object.entries(value.scoreDays?.[name]||{})){if(!dates[day]||meta.updatedAt>=dates[day].updatedAt)dates[day]=meta;}next.scoreDays[name]=dates;
+  }
+  delete next.gameUpdates;return next;
+});}
 export function mergeGames(oldItems=[],incoming=[]){const m=new Map(oldItems.map(x=>[String(x.id),x]));incoming.forEach(x=>m.set(String(x.id),x));return [...m.values()];}
 export function settled(b){return ['WON','LOST','PUSH','VOID','CANCELLED','CANCELED'].includes(String(b.betOnlineStatus||'').toUpperCase());}
 export function mergeBets(oldItems=[],incoming=[]){
@@ -26,7 +34,7 @@ export function mergeBets(oldItems=[],incoming=[]){
       else merged.legs=b.legs;
     }
     delete merged.replaceLegs;
-    if(settled(prev)&&!settled(b)){merged.betOnlineStatus=prev.betOnlineStatus;merged.toWin=prev.toWin;merged.risk=prev.risk;merged.sourceSnapshot=prev.sourceSnapshot;merged.gradedDate=prev.gradedDate;}
+    if(settled(prev)&&!settled(b)){merged.betOnlineStatus=prev.betOnlineStatus;merged.status=prev.status;merged.toWin=prev.toWin;merged.risk=prev.risk;merged.sourceSnapshot=prev.sourceSnapshot;merged.gradedDate=prev.gradedDate;}
     m.set(String(b.betId),merged);
   }return [...m.values()];
 }

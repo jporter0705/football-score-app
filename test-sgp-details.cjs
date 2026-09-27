@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),{ctx,run}=require('./test-support-browser.cjs')();
+const g={id:'12',competitions:[{status:{type:{state:'in'}},competitors:[{homeAway:'away',team:{id:'12',displayName:'Kansas City Chiefs'}},{homeAway:'home',team:{id:'15',displayName:'Miami Dolphins'}}]}]};
+ctx.S.nfl=[g];ctx.S.collegeAll=[];
+const b={sport:'NFL',structure:'same_game_parlay',espnEventId:'12',awayTeam:'Kansas City Chiefs',homeTeam:'Miami Dolphins',legs:[]};
+const kelce={sport:'NFL',market:'player_prop',propType:'anytime_td',player:'T. Kelce',selection:'T. Kelce',espnEventId:'12',line:.5},walker={...kelce,player:'Kenneth Walker III',selection:'Kenneth Walker III',propType:'rushing_yards',line:69.5,side:'over'};
+b.legs=[kelce,walker];assert.equal(ctx.betState(b,g),'live','SGP parent follows live event even before player stats');
+assert.match(ctx.propRequirement(kelce),/T\. Kelce — Score TD/);assert.match(ctx.propRequirement(walker),/70\+ Rushing yds/);
+ctx.S.summaries['NFL:12']={boxscore:{players:[{team:{id:'12'},statistics:[{athletes:[{athlete:{displayName:'Travis Kelce'}},{athlete:{displayName:'Kenneth Walker III'}}]}]}]}};
+assert.equal(ctx.playerGameEvidence(kelce,g).verified,true);assert.equal(ctx.playerGameEvidence(walker,g).verified,true,'use actual game evidence, not assumptions about team membership');
+const bad={...kelce,player:'Different Player'};assert.equal(ctx.playerGameEvidence(bad,g).verified,false);assert.match(ctx.legHtml(bad,b),/Player not verified/);assert(!ctx.legHtml(bad,b).includes('Miami Dolphins'),'do not invent a player-game association');
+assert.equal(ctx.legDisplayStatus({...kelce,matchIssue:'Leg points to a different game'},b),'unavailable');
+assert.equal(ctx.playerNameMatches('T. Kelce','Travis Kelce'),true);assert.equal(ctx.playerNameMatches('T. Kelce','Jason Kelce'),false);
+console.log('PASS live SGP inheritance, meaningful TD/yardage labels, initial-name matching, real player evidence and unverified-player safeguards');
