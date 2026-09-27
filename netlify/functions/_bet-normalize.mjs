@@ -61,8 +61,8 @@ function normalizeItem(input,parent={},previous={}){
   if(ml){x.market='moneyline';x.selection=ml[1];}
   const td=raw.match(/(?:Player TDs\s*-\s*)?([^|]+?)\s+(?:Score anytime|Score a Touchdown|anytime TD)/i);
   if(td||x.propType==='anytime_td'){x.market='player_prop';x.propType='anytime_td';x.player=x.player||td?.[1];x.line=.5;}
-  const stat=raw.match(/(?:Player stats\s*-\s*)?(.+?)\s+(\d+(?:\.\d+)?)\+\s+(Rushing yds|Receiving yds|Passing yds|Passing TDs(?: thrown)?|Pass interceptions?|Receptions?)/i);
-  if(stat){x.market='player_prop';x.player=x.player||stat[1];x.propType=x.propType||({'rushing yds':'rushing_yards','receiving yds':'receiving_yards','passing yds':'passing_yards'}[stat[3].toLowerCase()]||(/td/i.test(stat[3])?'passing_tds_gte':/interception/i.test(stat[3])?'passing_interceptions':'receptions'));if(!x.side||x.side==='gte'){x.line=Number(stat[2]);x.side='gte';}}
+  const stat=raw.match(/(?:Player stats\s*-\s*)?(.+?)\s+(\d+(?:\.\d+)?)\+\s+(Rushing yds|Receiving yds|Passing yds|Passing TDs(?: thrown)?|Rushing TDs|Receiving TDs|Total TDs|Pass interceptions?|Receptions?)/i);
+  if(stat){x.market='player_prop';x.player=x.player||stat[1];x.propType=x.propType||({'rushing yds':'rushing_yards','receiving yds':'receiving_yards','passing yds':'passing_yards'}[stat[3].toLowerCase()]||(/td/i.test(stat[3])?stat[3].toLowerCase().split(' ')[0]+'_tds_gte':/interception/i.test(stat[3])?'passing_interceptions':'receptions'));if(!x.side||x.side==='gte'){x.line=Number(stat[2]);x.side='gte';}}
   if(x.market==='player_prop'&&x.side==='gte'&&!String(x.propType).endsWith('_gte')&&Number.isFinite(x.line)){x.line-=.5;x.side='over';}
   if(x.market==='total'&&!x.awayTeam){const m=raw.match(/^(?:FOOTBALL\s*-\s*)?\d*\s*(.+?)\/(.+?)\s+(over|under)\s+/i);if(m){x.awayTeam=m[1];x.homeTeam=m[2];x.side=x.side||m[3].toLowerCase();}}
   if(!x.market){const total=raw.match(/Total points\s*-\s*(Over|Under)\s+([\d.]+)/i);if(total){x.market='total';x.selection=total[1].toLowerCase();x.side=x.selection;x.line=Number(total[2]);}}

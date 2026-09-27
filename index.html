@@ -277,21 +277,36 @@ function findAthleteStat(summary,player,statType){
     });
   });return isFinite(out)?out:null;
 }
-function anytimeTdHit(summary,player){
-  if(!summary||!player)return false;var n=norm(player),texts=[];
-  (summary.scoringPlays||[]).forEach(function(p){texts.push(p.text||'');texts.push(p.shortText||'')});
-  (summary.plays||[]).forEach(function(p){if(p.scoringPlay)texts.push(p.text||'')});
-  return texts.some(function(t){var nt=norm(t);return nt.indexOf(n)>=0&&(/touchdown| td /.test(' '+nt+' '))});
+function touchdownCount(summary,player,type){
+  if(!summary||!player)return null;
+  var category=String(type).replace(/_gte$/,''),counts={},seen=false,invalid=false;
+  var groups={rushing:'rushingTouchdowns',receiving:'receivingTouchdowns',passing:'passingTouchdowns',kickReturns:'kickReturnTouchdowns',puntReturns:'puntReturnTouchdowns',defensive:'defensiveTouchdowns',interceptions:'interceptionTouchdowns'};
+  var only={rushing_tds:'rushing',receiving_tds:'receiving',passing_tds:'passing'}[category];
+  (summary.boxscore&&summary.boxscore.players||[]).forEach(function(team){(team.statistics||[]).forEach(function(group){
+    var kind=group.name;if(!groups[kind]||(only?kind!==only:kind==='passing'))return;
+    var idx=-1;[group.keys,group.names].some(function(cols){idx=(cols||[]).map(function(k){return String(k).toLowerCase()}).indexOf(groups[kind].toLowerCase());return idx>=0});
+    if(idx<0)idx=(group.labels||[]).indexOf('TD');
+    (group.athletes||[]).forEach(function(a){var name=a.athlete&&(a.athlete.displayName||a.athlete.fullName||a.athlete.shortName);if(typeof playerNameMatches==='function'?!playerNameMatches(name,player):norm(name)!==norm(player))return;
+      var raw=idx>=0&&a.stats?a.stats[idx]:null;if(raw==null||String(raw).trim()===''||!Number.isFinite(Number(raw))){invalid=true;return;}
+      seen=true;counts[kind]=Number(raw);
+    });
+  })});
+  // Defense TDs include interception returns; never count that breakdown twice.
+  if(counts.defensive!=null)delete counts.interceptions;
+  return invalid||!seen?null:Object.values(counts).reduce(function(a,b){return a+b},0);
 }
 function isReversibleStat(type){return type==='rushing_yards'||type==='receiving_yards'||type==='passing_yards'||type==='return_yards'}
 function propEval(item,g){
   var type=item.propType||item.gradingType||'',sum=summaryFor(item.espnEventId||(g&&g.id),item.sport),line=Number(item.line),state=g?gs(g):'pre';
   if(type==='anytime_td'){
-    if(anytimeTdHit(sum,item.player))return{status:'won',locked:true,value:1,target:1};
+    var td=touchdownCount(sum,item.player,type);
+    if(td==null)return{status:state==='in'?'live':'unavailable',locked:false,value:null,target:1};
+    if(td>=1)return{status:'won',locked:true,value:td,target:1};
     if(state==='post')return{status:'lost',locked:true,value:0,target:1};
     return{status:state==='in'?'live':'pending',locked:false,value:0,target:1};
   }
-  var v=findAthleteStat(sum,item.player,type);if(v==null)return{status:state==='in'?'live':'pending',locked:false,value:null,target:line};
+  var isTd=/^(total|rushing|receiving|passing)_tds(?:_gte)?$/.test(type);
+  var v=isTd?touchdownCount(sum,item.player,type):findAthleteStat(sum,item.player,type);if(v==null)return{status:state==='in'?'live':'unavailable',locked:false,value:null,target:line};
   var under=String(item.selection||item.side||'').toLowerCase().indexOf('under')>=0;
   if(type==='passing_tds_gte'||String(type).endsWith('_gte')){
     if(v>=line)return{status:'won',locked:true,value:v,target:line};
