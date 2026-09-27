@@ -77,9 +77,25 @@ renderAll=function(){
   var previous=matchupRenderCache;matchupRenderCache=new Map();
   try{return uncachedRenderAll()}finally{matchupRenderCache=previous}
 };
+// Cache resolver work across every synchronous render entry point and summary scan.
+// Nested renderers share the same cache; no results survive a render or data refresh.
+function withMatchupRenderCache(fn){return function(){
+  if(matchupRenderCache)return fn.apply(this,arguments);
+  matchupRenderCache=new Map();
+  try{return fn.apply(this,arguments)}finally{matchupRenderCache=null}
+}}
+renderAll=withMatchupRenderCache(uncachedRenderAll);
+renderBets=withMatchupRenderCache(renderBets);
+renderScoreboard=withMatchupRenderCache(renderScoreboard);
+renderAllGames=withMatchupRenderCache(renderAllGames);
+refreshSummaries=withMatchupRenderCache(refreshSummaries);
+
 </script>`;
 
 // Enhancements are explicit production dependencies. The compatibility layer follows them so shared resolvers win.
 html = html.replace('</body>','<script src="/enhancements.js?v=4.7.5"></script>'+overrides+'</body>');
 fs.writeFileSync(indexPath,html);
 console.log('Built app: '+assets.length+' public assets plus named imports and integrated UI enhancements.');
+
+
+
