@@ -59,6 +59,24 @@ function sortBets(a,b){
   if(sa===1){var ta=betKickoff(a),tb=betKickoff(b);if(ta!==tb)return (ta||Infinity)-(tb||Infinity);var ka=betGameKey(a),kb=betGameKey(b);if(ka!==kb)return ka.localeCompare(kb);return String(a.betId||'').localeCompare(String(b.betId||''))}
   var da=Date.parse(a.gradedDate||a.acceptedDate||0)||0,db=Date.parse(b.gradedDate||b.acceptedDate||0)||0;return sa===2?db-da:da-db;
 }
+
+// Reuse matchup results within one synchronous render, including unmatched records.
+// Each render gets a fresh cache so refreshed schedules and edited bets are respected.
+var matchupRenderCache=null;
+var uncachedExactMatchGame=exactMatchGame;
+exactMatchGame=function(pool,item){
+  if(!matchupRenderCache||!item)return uncachedExactMatchGame(pool,item);
+  var cache=matchupRenderCache.get(pool);
+  if(!cache){cache=new Map();matchupRenderCache.set(pool,cache)}
+  var key=JSON.stringify([item.espnEventId||null,item.awayTeam||null,item.homeTeam||null]);
+  if(cache.has(key))return cache.get(key);
+  var result=uncachedExactMatchGame(pool,item);cache.set(key,result);return result;
+};
+var uncachedRenderAll=renderAll;
+renderAll=function(){
+  var previous=matchupRenderCache;matchupRenderCache=new Map();
+  try{return uncachedRenderAll()}finally{matchupRenderCache=previous}
+};
 </script>`;
 
 // Enhancements are explicit production dependencies. The compatibility layer follows them so shared resolvers win.
