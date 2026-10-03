@@ -11,9 +11,9 @@ function playerGameEvidence(item,g){
   var sum=summaryFor(g.id,item.sport),matches=[];
   if(!sum)return {verified:false,pending:true,issue:'Player verification pending'};
   var teamIds=(comp(g).competitors||[]).map(function(c){return String(c.team&&c.team.id||c.id||'')}).filter(Boolean);
-  (sum.boxscore&&sum.boxscore.players||[]).forEach(function(t){if(teamIds.length&&teamIds.indexOf(String(t.team&&t.team.id))<0)return;(t.statistics||[]).forEach(function(group){(group.athletes||[]).forEach(function(a){if(playerNameMatches(a.athlete&&a.athlete.displayName,item.player))matches.push(a.athlete.displayName)})})});
-  (sum.rosters||[]).forEach(function(t){if(teamIds.length&&teamIds.indexOf(String(t.team&&t.team.id))<0)return;(t.roster||[]).forEach(function(a){if(playerNameMatches(a.athlete&&a.athlete.displayName,item.player))matches.push(a.athlete.displayName)})});
-  var names=Array.from(new Set(matches));return names.length===1?{verified:true,player:names[0]}:{verified:false,issue:'Player not verified for this game'};
+  (sum.boxscore&&sum.boxscore.players||[]).forEach(function(t){if(teamIds.length&&teamIds.indexOf(String(t.team&&t.team.id))<0)return;(t.statistics||[]).forEach(function(group){(group.athletes||[]).forEach(function(a){if(playerNameMatches(a.athlete&&a.athlete.displayName,item.player))matches.push({name:a.athlete.displayName,key:String(t.team&&t.team.id||'')+':'+String(a.athlete.id||a.athlete.displayName)})})})});
+  (sum.rosters||[]).forEach(function(t){if(teamIds.length&&teamIds.indexOf(String(t.team&&t.team.id))<0)return;(t.roster||[]).forEach(function(a){if(playerNameMatches(a.athlete&&a.athlete.displayName,item.player))matches.push({name:a.athlete.displayName,key:String(t.team&&t.team.id||'')+':'+String(a.athlete.id||a.athlete.displayName)})})});
+  var names=Array.from(new Map(matches.map(function(m){return [m.key,m.name]})).values());return names.length===1?{verified:true,player:names[0]}:{verified:false,issue:'Player not verified for this game'};
 }
 function propRequirement(l){
   var player=l.player||l.selection||'Player',type=l.propType||l.prop_type||'',raw=l.raw||l.description||'';

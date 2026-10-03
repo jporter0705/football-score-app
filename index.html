@@ -273,7 +273,7 @@ function findAthleteStat(summary,player,statType){
         return (keys[statType]||[]).some(function(k){idx=names.indexOf(k);return idx>=0});
       });
       if(idx<0)return;
-      (group.athletes||[]).forEach(function(a){var nm=norm(a.athlete&&(a.athlete.displayName||a.athlete.shortName||a.athlete.fullName));if(nm===target||nm.indexOf(target)>=0||target.indexOf(nm)>=0){var v=a.stats&&a.stats[idx];if(v!=null&&v!=='')out=Number(String(v).split('/')[0])}});
+      (group.athletes||[]).forEach(function(a){var nm=norm(a.athlete&&(a.athlete.displayName||a.athlete.shortName||a.athlete.fullName));if(nm===target){var v=a.stats&&a.stats[idx];if(v!=null&&v!=='')out=Number(String(v).split('/')[0])}});
     });
   });return isFinite(out)?out:null;
 }
@@ -314,11 +314,11 @@ function propEval(item,g){
     return{status:state==='in'?'live':'pending',locked:false,value:v,target:line};
   }
   if(under){
-    if(v>line)return{status:'lost',locked:true,value:v,target:line};
-    if(state==='post')return{status:'won',locked:true,value:v,target:line};
+    if(v>line&&!isReversibleStat(type))return{status:'lost',locked:true,value:v,target:line};
+    if(state==='post')return{status:v===line?'push':v<line?'won':'lost',locked:true,value:v,target:line};
   }else{
     if(v>line&&!isReversibleStat(type))return{status:'won',locked:true,value:v,target:line};
-    if(state==='post')return{status:v>line?'won':'lost',locked:true,value:v,target:line};
+    if(state==='post')return{status:v===line?'push':v>line?'won':'lost',locked:true,value:v,target:line};
   }
   return{status:state==='in'?'live':'pending',locked:false,value:v,target:line};
 }

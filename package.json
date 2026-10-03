@@ -3,7 +3,7 @@
   "private": true,
   "version": "4.7.1",
   "scripts": {
-    "test": "node test.cjs && node test-score-feed.cjs && node test-release.cjs && node test-refresh.cjs && node --experimental-vm-modules test-netlify.cjs && node test-local-import.cjs && node scripts/build.cjs && node test-render-cache.cjs && node test-growth.cjs && node test-sgp-details.cjs && node --experimental-vm-modules test-import-recovery.cjs && node --experimental-vm-modules test-score-cache.cjs && node test-touchdowns.cjs && node --experimental-vm-modules test-csv-import.cjs && node test-csv-ui.cjs",
+    "test": "node test.cjs && node test-score-feed.cjs && node test-release.cjs && node test-refresh.cjs && node --experimental-vm-modules test-netlify.cjs && node test-local-import.cjs && node scripts/build.cjs && node test-render-cache.cjs && node test-growth.cjs && node test-sgp-details.cjs && node --experimental-vm-modules test-import-recovery.cjs && node --experimental-vm-modules test-score-cache.cjs && node test-touchdowns.cjs && node --experimental-vm-modules test-csv-import.cjs && node test-csv-ui.cjs && node test-live-progress.cjs",
     "build": "node scripts/build.cjs"
   },
   "engines": {
