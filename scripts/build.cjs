@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
-const assets = ['index.html','import.html','recovery.html','sgp-details.js','enhancements.js','weeks.js','sw.js','manifest.webmanifest','icon-192.png','icon-512.png'];
+const assets = ['index.html','upload-bets.html','csv-import-ui.mjs','import.html','recovery.html','sgp-details.js','enhancements.js','weeks.js','sw.js','manifest.webmanifest','icon-192.png','icon-512.png'];
 fs.rmSync(output, {recursive:true, force:true});
 fs.mkdirSync(output, {recursive:true});
 for (const name of assets) fs.copyFileSync(path.join(root,name),path.join(output,name));

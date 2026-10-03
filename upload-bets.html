@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Import bets</title>
+<style>
+:root{color-scheme:dark;font:16px system-ui;color:#f7f9fb;background:#0b162a}*{box-sizing:border-box}body{margin:0}main{max-width:850px;margin:auto;padding:24px 16px 60px}a{color:#abd8ff}h1{margin-bottom:8px}p{line-height:1.5;color:#c1cede}section,article{border:1px solid #35465f;border-radius:12px;padding:16px;margin:16px 0;background:#15243b}label{display:block;margin:12px 0}input,select,button{font:inherit;padding:12px;border-radius:8px;border:1px solid #59708f;max-width:100%}button{background:#bd3908;color:white;cursor:pointer;font-weight:650}button:disabled{opacity:.5;cursor:default}input,select{background:#0b162a;color:white}input[type=file]{width:100%}input[type=checkbox]{margin-right:8px}#status{white-space:pre-wrap;padding:12px 0}#summary{font-size:19px;font-weight:650}small{color:#b3c5db}details{margin-top:12px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}h2{font-size:18px;margin-top:0}.review{border-left:5px solid #f4bd66}.new{border-left:5px solid #6bd7a1}.updated{border-left:5px solid #8cbcfb}[hidden]{display:none!important}#actions{position:sticky;bottom:0;padding:12px;background:#0b162af5;border-top:1px solid #35465f}#actions button{width:100%}
+</style></head><body><main>
+<a href="/">← Back to bets</a><h1>Import bets</h1><p>Choose your BetOnline CSV, review the changes, then save. Matching Bet IDs update existing wagers without adding duplicates.</p>
+<section id="login" hidden><h2>Unlock private bets</h2><label>Access key <input id="key" type="password" autocomplete="current-password"></label><button id="unlock">Unlock</button></section>
+<section><label for="file">BetOnline export (.csv)</label><input id="file" type="file" accept=".csv,text/csv"><p><small>Your file is checked against private app storage. Existing wagers stay in their saved weeks. A recovery copy is made before each changed week is saved.</small></p><button id="preview" disabled>Preview changes</button></section>
+<div id="status" role="status" aria-live="polite">Checking private access…</div>
+<div id="summary"></div><div id="rows"></div>
+<div id="actions" hidden><label><input id="confirmed" type="checkbox">I reviewed these changes.</label><button id="save" disabled>Save changes</button></div>
+<p><a href="/recovery.html">Bet backups</a> · Saving uses ordinary app storage, with no AI processing.</p>
+</main><script type="module" src="/csv-import-ui.mjs"></script></body></html>
