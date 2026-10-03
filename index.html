@@ -103,9 +103,10 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 <div class="app">
 <header>
 <div class="tabs">
-<button class="tab active" data-tab="scoreboard">Scoreboard</button>
-<button class="tab" data-tab="bets">Bets</button>
+<button class="tab active" data-tab="scoreboard">My Games</button>
 <button class="tab" data-tab="allgames">All Games</button>
+<button class="tab" data-tab="bets">Bets</button>
+<button class="tab" data-tab="results">Results</button>
 </div>
 <div style="text-align:right;margin:6px 0"><a href="/upload-bets.html" style="color:#abd8ff;font-size:13px">Import CSV</a></div><div class="toolbar" id="toolbar">
 <select id="weekSelect" aria-label="Betting week"></select><span id="betDates" style="margin-right:auto;font-size:11px;color:var(--muted)" hidden></span>
@@ -120,6 +121,7 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 <section id="scoreboard" class="view active"></section>
 <section id="bets" class="view"></section>
 <section id="allgames" class="view"></section>
+<section id="results" class="view"></section>
 </main>
 <footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.7.1</footer>
 </div>
