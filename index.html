@@ -103,10 +103,10 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 <div class="app">
 <header>
 <div class="tabs">
-<button class="tab active" data-tab="scoreboard">My Games</button>
-<button class="tab" data-tab="allgames">All Games</button>
 <button class="tab" data-tab="bets">Bets</button>
+<button class="tab active" data-tab="scoreboard">My Games</button>
 <button class="tab" data-tab="results">Results</button>
+<button class="tab" data-tab="allgames">All Games</button>
 </div>
 <div style="text-align:right;margin:6px 0"><a href="/upload-bets.html" style="color:#abd8ff;font-size:13px">Import CSV</a></div><div class="toolbar" id="toolbar">
 <select id="weekSelect" aria-label="Betting week"></select><span id="betDates" style="margin-right:auto;font-size:11px;color:var(--muted)" hidden></span>
@@ -435,10 +435,11 @@ function sortBets(a,b){
   var da=Date.parse(a.gradedDate||a.acceptedDate||0)||0,db=Date.parse(b.gradedDate||b.acceptedDate||0)||0;
   return sa===2?db-da:da-db;
 }
+var myGamesAll=localStorage.getItem('football-my-games-all')==='true';
 function renderScoreboard(){
-  var items=(sport==='nfl'?S.nfl:S.collegeView).map(function(e){return{e:e,sp:sport}})
+  var items=(myGamesAll?S.nfl.map(function(e){return{e:e,sp:'nfl'}}).concat(S.collegeAll.map(function(e){return{e:e,sp:'college'}})):(sport==='nfl'?S.nfl:S.collegeView).map(function(e){return{e:e,sp:sport}}))
     .filter(function(x){return favs.has(x.sp+':'+x.e.id)||betsFor(x.e,x.sp).length}).sort(function(a,b){return sortGames(a.e,b.e)});
-  document.getElementById('scoreboard').innerHTML=leagueControls()+'<div class="weekline"><b>Tracked Games</b><span>$ bet-linked · ★ starred</span></div>'+(items.length?items.map(function(x){return gameCard(x.e,x.sp)}).join(''):'<div class="empty">No tracked games yet.</div>');
+  document.getElementById('scoreboard').innerHTML=leagueControls(true)+'<div class="weekline"><b>Tracked Games</b><span>$ bet-linked · ★ starred</span></div>'+(items.length?items.map(function(x){return gameCard(x.e,x.sp)}).join(''):'<div class="empty">No tracked games yet.</div>');
   bindLeagueControls();attachStars();
 }
 function renderBets(){
@@ -457,14 +458,15 @@ function renderBets(){
   document.querySelectorAll('[data-f]').forEach(function(b){b.onclick=function(){betFilter=b.dataset.f;renderBets()}});
   document.querySelectorAll('[data-s]').forEach(function(b){b.onclick=function(){betSport=b.dataset.s;renderBets()}});
 }
-function leagueControls(){
+function leagueControls(tracked){
   var filters=[['80','All'],['top25','Top 25'],['1','ACC'],['4','Big 12'],['5','Big Ten'],['8','SEC']];
-  var bubbles=[['nfl','NFL'],['college','College']].map(function(x){return '<button class="filter '+(sport===x[0]?'active':'')+'" aria-pressed="'+(sport===x[0])+'" data-games="'+x[0]+'">'+x[1]+'</button>'}).join('');
-  var dropdown='<label class="conference-picker"'+(sport==='nfl'?' hidden':'')+'><select class="conference" aria-label="College conference">'+filters.map(function(x){return '<option value="'+x[0]+'"'+(group===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join('')+'</select></label>';
+  var bubbles=[['nfl','NFL'],['college','College']].map(function(x){return '<button class="filter '+(sport===x[0]&&!(tracked&&myGamesAll)?'active':'')+'" aria-pressed="'+(sport===x[0]&&!(tracked&&myGamesAll))+'" data-games="'+x[0]+'">'+x[1]+'</button>'}).join('');
+  if(tracked)bubbles='<button class="filter '+(myGamesAll?'active':'')+'" aria-pressed="'+myGamesAll+'" data-my-games-all>All</button>'+bubbles;
+  var dropdown='<label class="conference-picker"'+(sport==='nfl'||tracked&&myGamesAll?' hidden':'')+'><select class="conference" aria-label="College conference">'+filters.map(function(x){return '<option value="'+x[0]+'"'+(group===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join('')+'</select></label>';
   return '<div class="game-leagues" role="group" aria-label="Games league or conference">'+bubbles+dropdown+'</div>';
 }
-function bindLeagueControls(){
-  document.querySelectorAll('[data-games]').forEach(function(b){b.onclick=function(){sport=b.dataset.games;localStorage.setItem('football-v4-sport',sport);renderAll()}});
+function bindLeagueControls(){document.querySelectorAll('[data-my-games-all]').forEach(function(b){b.onclick=function(){myGamesAll=true;localStorage.setItem('football-my-games-all','true');renderAll()}});
+  document.querySelectorAll('[data-games]').forEach(function(b){b.onclick=function(){myGamesAll=false;localStorage.setItem('football-my-games-all','false');sport=b.dataset.games;localStorage.setItem('football-v4-sport',sport);renderAll()}});
   document.querySelectorAll('.conference').forEach(function(select){select.onchange=function(){group=this.value;localStorage.setItem('football-v45-conference',group);S.collegeView=group==='top25'?S.collegeAll.filter(top25Event):group==='80'?S.collegeAll:[];renderAll();if(group!=='top25'&&group!=='80')refresh()}});
 }
 function renderAllGames(){
@@ -510,7 +512,7 @@ function renderSampleBoard(id){
   bindLeagueControls();
 }
 var realScoreboardRenderer=renderScoreboard,realAllGamesRenderer=renderAllGames;
-renderScoreboard=function(){if(sampleRankings&&sport==='college')renderSampleBoard('scoreboard');else realScoreboardRenderer()};
+renderScoreboard=function(){if(sampleRankings&&sport==='college'&&!myGamesAll)renderSampleBoard('scoreboard');else realScoreboardRenderer()};
 renderAllGames=function(){if(sampleRankings&&sport==='college')renderSampleBoard('allgames');else realAllGamesRenderer()};
 function updateSampleButton(){var b=document.getElementById('sampleRankings');b.setAttribute('aria-pressed',String(sampleRankings));b.textContent=sampleRankings?'Sample rankings: On':'Sample rankings: Off'}
 document.getElementById('sampleRankings').onclick=function(){sampleRankings=!sampleRankings;if(sampleRankings){sport='college';group='80';if(tab==='bets')tab='scoreboard'}updateSampleButton();renderTabs()};
