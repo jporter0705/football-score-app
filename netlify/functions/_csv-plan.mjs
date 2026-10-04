@@ -16,6 +16,12 @@ function amount(v, name) {
   if (!Number.isFinite(n) || n < 0) throw Error('Invalid '+name);
   return n;
 }
+function recoverTeamTotal(row) {
+  if(!/^Straight bet selection\/market not parsed;?\s*$/.test(row.extraction_error||'')||!/^(Live|Straight)$/i.test(row.type||'')||Number(row.leg_count||0)!==0)return null;
+  const m=String(row.description||'').match(/^(?:Mobile\s*-\s*)?(.+?) at (.+?) - (.+?) - Team Total - (OVER|UNDER) (\d+(?:\.\d+)?)$/i);
+  if(!m||![m[1],m[2]].some(t=>t.trim().toLowerCase()===m[3].trim().toLowerCase()))return null;
+  return {...row,market:'team_total',selection:m[3].trim(),side:m[4].toLowerCase(),line:m[5],game_text:m[1]+' at '+m[2],extraction_error:''};
+}
 function parse(row) {
   if (!/^[\w-]{1,80}$/.test(row.bet_id || '')) throw Error('Missing or invalid Bet ID');
   const status = String(row.status || '').toUpperCase();
@@ -45,6 +51,7 @@ function chooseWeek(b, weeks, explicit) {
   const eventWeeks = [...new Set(dates.map(weekFromDay).filter(Boolean))];
   if (eventWeeks.length === 1) return {week:eventWeeks[0]};
   const acceptedWeek = weekFor(b.acceptedDate).start;
+  if(String(b.type).toLowerCase()==='live')return {week:acceptedWeek};
   // Consider this week and the following week: bets may be placed before Tuesday.
   const candidates = weeks.filter(w => w.week >= acceptedWeek && w.week <= new Date(Date.parse(acceptedWeek+'T12:00:00Z')+7*86400000).toISOString().slice(0,10))
     .filter(w => normalizeBet(b,w.scores).espnEventId);
@@ -81,9 +88,12 @@ export function makePlan(csv, weeks, choices = {}) {
     const item = {row:index+2,betId:row.bet_id || '',description:row.description || row.raw_row || '',action:'review'};
     try {
       if (counts.get(row.bet_id) > 1) throw Error('Duplicate Bet ID in this CSV');
-      const b = parse(row), matches = existing.get(b.betId) || [];
+      const recovered=recoverTeamTotal(row);
+      const input=recovered||row;
+      const b = parse(input), matches = existing.get(b.betId) || [];
       if (matches.length > 1) throw Error('This Bet ID is already saved in multiple weeks; resolve it before importing');
-      if (row.extraction_error) throw Error('Exporter warning: '+row.extraction_error);
+      if (input.extraction_error) throw Error('Exporter warning: '+input.extraction_error);
+      if(recovered)item.notice='Team total recovered from the complete wager description.';
       const prior = matches[0], destination = prior ? {week:prior.week} : chooseWeek(b,weeks,Object.hasOwn(choices,b.betId)?choices[b.betId]:null);
       Object.assign(item,destination,{existing:!!prior,risk:b.risk,status:b.betOnlineStatus});
       if (!destination.week) return item;
