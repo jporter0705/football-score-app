@@ -27,7 +27,10 @@ function parse(row) {
   const status = String(row.status || '').toUpperCase();
   if (!statuses.has(status)) throw Error('Unknown settlement status');
   const acceptedDate = date(row.accepted_date);
-  const b = {betId:row.bet_id, acceptedDate, risk:amount(row.risk,'risk'), toWin:amount(row.to_win,'to win'), status, betOnlineStatus:status};
+  // BetOnline displays a dash instead of a payout on refunded tickets.
+  const refunded = ['PUSH','VOID','CANCELLED','CANCELED'].includes(status);
+  const payout = refunded && /^[-–—]$/.test(String(row.to_win ?? '').trim()) ? 0 : row.to_win;
+  const b = {betId:row.bet_id, acceptedDate, risk:amount(row.risk,'risk'), toWin:amount(payout,'to win'), status, betOnlineStatus:status};
   for (const k of ['type','description','market','selection','side','period','graded_date','raw_row','game_text']) if (row[k] && row[k] !== 'N/A') b[k] = row[k];
   for (const k of ['line','odds']) if (row[k] !== '' && row[k] != null) {
     b[k] = Number(row[k]); if (!Number.isFinite(b[k])) throw Error('Invalid '+k);
