@@ -32,8 +32,9 @@ function teamMatches(c,value){const t=c?.team||{},n=name(value);return !!n&&[t.l
 export function resolveMatch(item,scores={}){
   const pools=[['NFL',scores.nfl||[]],['College',scores.college||[]]];
   const sport=canonicalSport(item.sport||item.league);
-  if(sport)pools.sort((a,b)=>(a[0]===sport?-1:1));
+  const candidates=[];
   for(const [sp,pool] of pools){
+    if(sport && sp!==sport)continue;
     let matches=[];
     if(item.espnEventId)matches=pool.filter(e=>String(e.id)===String(item.espnEventId));
     if(!matches.length){
@@ -43,12 +44,18 @@ export function resolveMatch(item,scores={}){
         return !item.legs?.length&&['spread','moneyline'].includes(item.market)&&cs.some(c=>teamMatches(c,item.selection));
       });
     }
-    if(matches.length===1){const e=matches[0],cs=e.competitions?.[0]?.competitors||[],away=cs.find(c=>c.homeAway==='away')?.team,home=cs.find(c=>c.homeAway==='home')?.team;
-      if(away&&home)return{espnEventId:String(e.id),sport:sp,league:sp==='NFL'?'NFL':'NCAA',awayTeam:away.displayName||away.shortDisplayName,homeTeam:home.displayName||home.shortDisplayName};}
+    for(const e of matches){const cs=e.competitions?.[0]?.competitors||[],away=cs.find(c=>c.homeAway==='away')?.team,home=cs.find(c=>c.homeAway==='home')?.team;
+      if(away&&home)candidates.push({espnEventId:String(e.id),sport:sp,league:sp==='NFL'?'NFL':'NCAA',awayTeam:away.displayName||away.shortDisplayName,homeTeam:home.displayName||home.shortDisplayName});}
   }
-  return null;
+  return candidates.length===1?candidates[0]:null;
 }
 function normalizeItem(input,parent={},previous={}){
+  // Fresh league evidence must not inherit an old match from another league.
+  const incomingSport=ownSport(input),oldSport=ownSport(previous);
+  if(incomingSport&&oldSport&&incomingSport!==oldSport){
+    previous={...previous};
+    for(const key of ['sport','league','espnEventId','awayTeam','homeTeam','eventDate','eventStart'])delete previous[key];
+  }
   const x=blend(previous,canonicalFields(input)),raw=clean(x.raw||x.description||x.selection),text=clean([x.description,x.raw,x.rawRow,x.gameText].filter(Boolean).join(' '));
   x.sport=ownSport(x)||parent.sport||canonicalSport(previous.sport)||(/\b(NCAA|NCAAF|college)\b/i.test(text)?'College':/\bNFL\b/i.test(text)?'NFL':undefined);
   // Keep a previously expanded player name when a later export abbreviates it.
