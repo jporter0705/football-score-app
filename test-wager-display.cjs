@@ -1,1 +1,14 @@
 const assert=require('assert'),{ctx}=require('./test-support-browser.cjs')();const g={id:'f',competitions:[{status:{period:4,type:{state:'post',completed:true}},competitors:[{homeAway:'away',score:'24',team:{id:'a',displayName:'Alpha',abbreviation:'ALP'},linescores:[{value:7},{value:3},{value:7},{value:7}]},{homeAway:'home',score:'17',team:{id:'b',displayName:'Beta',abbreviation:'BET'},linescores:[{value:0},{value:7},{value:7},{value:3}]}]}]};const b={betId:'f',sport:'NFL',espnEventId:'f',market:'total',selection:'Over',line:40,betOnlineStatus:'WON'};ctx.S.nfl=[g];assert.match(ctx.betCard(b),/Final: ALP 24 · BET 17 · Total 41/);assert.match(ctx.gradingEvidence({...b,scope:'first_half'},g),/First half final: ALP 10 · BET 7 · Total 17/);assert.match(ctx.legHtml({...b,status:'WON'},{sport:'NFL'}),/Final: ALP 24/);ctx.S.summaries['NFL:f']={boxscore:{players:[{team:{id:'a'},statistics:[{name:'rushing',keys:['rushingYards'],athletes:[{athlete:{displayName:'John Runner'},stats:['62']}]}]}]}};const prop={...b,market:'player_prop',player:'John Runner',propType:'rushing_yards',side:'over',line:49.5};assert.match(ctx.gradingEvidence(prop,g),/Final stat: 62/);assert.match(ctx.gradingEvidence({...prop,scope:'first_half'},g),/Period-specific player stats unavailable/);assert.match(ctx.gradingEvidence(b,null),/unavailable/);console.log('PASS final scores, scoped scores, totals, final prop stats and missing evidence');
+const teamTotal={sport:'NFL',espnEventId:'f',market:'team_total',selection:'Alpha',side:'over',line:28.5};
+assert.equal(ctx.evaluateMarket(teamTotal,g).status,'lost','Opponent points must not count');
+assert.equal(ctx.evaluateMarket({...teamTotal,line:23.5},g).status,'won');
+assert.equal(ctx.evaluateMarket({...teamTotal,line:24},g).status,'push');
+assert.equal(ctx.evaluateMarket({...teamTotal,side:'under'},g).status,'won');
+assert.equal(ctx.evaluateMarket({...teamTotal,selection:'Missing'},g).status,'unavailable');
+assert.equal(ctx.evaluateMarket({...teamTotal,line:null},g).status,'unavailable');
+assert.equal(ctx.evaluateMarket({...teamTotal,period:'first_half',line:10.5},g).status,'lost');
+assert.equal(ctx.result({...teamTotal,betOnlineStatus:'WON'},g),'won');
+const legacy={...teamTotal,market:'unknown',selection:'Team points - Alpha Over 28.5',raw:'Team points - Alpha Over 28.5',line:null};
+assert.match(ctx.legHtml(legacy,{sport:'NFL'}),/Alpha — Team total over 28.5/);
+assert.match(ctx.gradingEvidence(legacy,g),/Alpha team points 24/);
+console.log('PASS team-total title, legacy recovery, selected-team-only grading, scope, safeguards and sportsbook authority');

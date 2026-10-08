@@ -57,6 +57,8 @@ function normalizeItem(input,parent={},previous={}){
     for(const key of ['sport','league','espnEventId','awayTeam','homeTeam','eventDate','eventStart'])delete previous[key];
   }
   const x=blend(previous,canonicalFields(input)),raw=clean(x.raw||x.description||x.selection),text=clean([x.description,x.raw,x.rawRow,x.gameText].filter(Boolean).join(' '));
+  const teamPoints=raw.match(/^Team (?:points|total)\s*-\s*(.+?)\s+(Over|Under)\s+(\d+(?:\.\d+)?)(?:\s*\(Game\))?$/i);
+  if(teamPoints){x.market='team_total';x.selection=teamPoints[1].trim();x.side=teamPoints[2].toLowerCase();x.line=Number(teamPoints[3]);}
   x.sport=ownSport(x)||parent.sport||canonicalSport(previous.sport)||(/\b(NCAA|NCAAF|college)\b/i.test(text)?'College':/\bNFL\b/i.test(text)?'NFL':undefined);
   // Keep a previously expanded player name when a later export abbreviates it.
   if(previous.player&&x.player){const a=name(x.player).split(' '),p=name(previous.player).split(' ');if(a[0]?.length===1&&a[0]===p[0]?.[0]&&a.slice(1).join(' ')===p.slice(1).join(' '))x.player=previous.player;}

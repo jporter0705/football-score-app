@@ -31,3 +31,10 @@ const collegiateCSV=csv({bet_id:'buffalo',type:'Spread',description:'335 Buffalo
 const repaired=makePlan(collegiateCSV,[{week:'2026-10-06',scores,bets:[{betId:'buffalo',sport:'NFL',league:'NFL',espnEventId:'bills',awayTeam:'Buffalo Bills',homeTeam:'NFL opponent'}]}]);
 assert.equal(repaired.summary.review,0);assert.equal(repaired.items[0].after.espnEventId,'bulls');assert.equal(repaired.items[0].after.league,'NCAA');
 console.log('PASS NCAA-only matching, cross-league ambiguity, stale NFL match repair and CSV league preservation');
+for(const line of [27.5,28.5]){
+ const sgp=csv({type:'Same Game Parlay',description:'Dallas Cowboys v Tampa Bay Buccaneers',market:'same game parlay',extraction_error:'',leg_count:'2',legs_json:JSON.stringify([{market:'moneyline',selection:'Cowboys'},{market:'unknown',selection:'Team points - Cowboys Over '+line,raw:'Team points - Cowboys Over '+line,line:null}])});
+ const p=makePlan(sgp,[],{'team-total-1':'2026-10-06'});assert.equal(p.summary.review,0);const leg=p.items[0].after.legs[1];assert.equal(leg.market,'team_total');assert.equal(leg.selection,'Cowboys');assert.equal(leg.side,'over');assert.equal(leg.line,line);
+}
+const unsupported=csv({type:'Same Game Parlay',extraction_error:'',leg_count:'2',legs_json:JSON.stringify([{market:'moneyline',selection:'Cowboys'},{market:'unknown',raw:'Unsupported market'}])});
+assert.match(makePlan(unsupported,[],{'team-total-1':'2026-10-06'}).items[0].reason,/Unrecognized wager leg/);
+console.log('PASS SGP team-points import recovery and unrecognized-leg warning');

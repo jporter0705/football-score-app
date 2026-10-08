@@ -101,6 +101,7 @@ export function makePlan(csv, weeks, choices = {}) {
       Object.assign(item,destination,{existing:!!prior,risk:b.risk,status:b.betOnlineStatus});
       if (!destination.week) return item;
       const w = weeks.find(w => w.week === destination.week), next = mergedRecord(prior?.bet,b,w?.scores || {});
+      if((next.legs||[]).some(l=>!l.market||l.market==='unknown'))throw Error('Unrecognized wager leg; review its original description before importing');
       item.after = next; item.before = prior?.bet || null; item.description = next.description;
       item.action = !prior ? 'new' : stable(next) === stable(prior.bet) ? 'unchanged' : 'updated';
       item.changes = prior ? Object.keys(next).filter(k => stable(next[k]) !== stable(prior.bet[k])) : [];
