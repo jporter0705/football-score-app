@@ -24,13 +24,34 @@ function midnightLegTeam(item,g){
   ((sum&&sum.rosters)||[]).forEach(function(group){(group.roster||[]).forEach(function(a){if(playerNameMatches(a.athlete&&a.athlete.displayName,item.player))ids.push(String(group.team&&group.team.id))})});
   matched=candidates.filter(function(c){return ids.includes(String(c.team&&c.team.id))});return matched.length===1?matched[0]:null;
 }
+function midnightLegProgress(item,g){
+  if(item.matchIssue)return item.matchIssue;
+  if(!g)return 'Game not matched';
+  if(gs(g)==='pre')return isPlayerProp(item)?'Player stats available after kickoff':'Not started';
+  var prefix=finalGame(g)?'Final: ':'Current: ';
+  if(isPlayerProp(item)){
+    var verification=playerGameEvidence(item,g);if(!verification.verified)return verification.issue;
+    if(!fullGameScope(item))return 'Period-specific player stats unavailable';
+    var e=propEval(item,g);if(e.value==null)return 'Player stat unavailable';
+    var units={rushing_yards:'rushing yds',receiving_yards:'receiving yds',passing_yards:'passing yds',receptions:'receptions',passing_tds:'passing TDs',passing_tds_gte:'passing TDs',rushing_tds:'rushing TDs',rushing_tds_gte:'rushing TDs',receiving_tds:'receiving TDs',receiving_tds_gte:'receiving TDs',total_tds:'TDs',total_tds_gte:'TDs',anytime_td:'TDs',passing_interceptions:'pass interceptions'};
+    return prefix+e.value+' '+(units[item.propType]||'');
+  }
+  var t=teams(g),a=t.away&&t.away.score,h=t.home&&t.home.score;
+  if(!fullGameScope(item)){var period=periodEvidence(item,g);if(!period||period.upcoming)return 'Period score unavailable';a=period.away;h=period.home;prefix=period.complete?'Final: ':'Current: ';}
+  if(a==null||h==null||a===''||h===''||!Number.isFinite(Number(a))||!Number.isFinite(Number(h)))return 'Score unavailable';
+  if(item.market==='total')return prefix+(Number(a)+Number(h))+' total points';
+  var away=canonicalTeamMatch(t.away,item.selection),home=canonicalTeamMatch(t.home,item.selection);if(away===home)return 'Selected team not matched';
+  var points=Number(away?a:h),opponent=Number(away?h:a);
+  if(item.market==='team_total')return prefix+points+' team points';
+  if(item.market==='moneyline'||item.market==='ml'){var margin=points-opponent;return margin===0?'Tied':(margin>0?'Ahead by ':'Behind by ')+Math.abs(margin);}
+  if(item.market==='spread'&&item.line!=null){var cushion=points-opponent+Number(item.line);return cushion===0?'At the spread':(cushion>0?'Covering by ':'Below spread by ')+Math.abs(cushion);}
+  return 'Progress unavailable';
+}
 legHtml=function(l,b){var item=teamPointsItem(Object.assign({sport:b.sport},l)),g=legGame(l,b),st=legDisplayStatus(l,b),closed=['won','lost','push'].includes(st),team=midnightLegTeam(item,g),label={won:'Won',lost:'Lost',push:'Push',live:'Live',pending:'Upcoming',unavailable:'Review'}[st]||'Upcoming';
-  var verification=isPlayerProp(item)?playerGameEvidence(item,g):null,evidence=verification&&!verification.verified&&gs(g)!=='pre'?verification.issue:gradingEvidence(item,g);
-  if(item.matchIssue)evidence=item.matchIssue;
   var requirement=isPlayerProp(item)?propRequirement(item):item.market==='team_total'?item.selection+' — Team total '+item.side+' '+item.line:legRequirement(item);
   if(!fullGameScope(item)){var scope=trackedPeriod(item);if(scope&&scope.label)requirement+=' · '+scope.label;}
   var logo=team&&team.team&&team.team.logo?'<img class="logo" alt="'+esc(team.team.displayName||'Team')+'" src="'+esc(team.team.logo)+'">':'';
-  return '<div class="leg"><div><div class="legmain">'+logo+'<span>'+esc(requirement)+'</span></div>'+((closed||isPlayerProp(item)||!fullGameScope(item))?'<div class="grading-evidence">'+esc(evidence)+'</div>':'')+midnightGameDetails(g,item.sport)+'</div><div class="status-pack"><span class="legstatus '+st+'">'+label+'</span>'+(!closed?wagerBars(item,g):'')+'</div></div>';
+  return '<div class="leg"><div><div class="legmain">'+logo+'<span>'+esc(requirement)+'</span></div><div class="grading-evidence leg-progress">'+esc(midnightLegProgress(item,g))+'</div></div><div class="status-pack"><span class="legstatus '+st+'">'+label+'</span>'+(!closed?wagerBars(item,g):'')+'</div></div>';
 };
 betCard=function(b){var g=findGame(b),hasLegs=(b.legs||[]).length,closed=authoritativeResult(b)||parlayAutoResult(b)||result(b,g),id='m'+String(b.betId).replace(/[^a-zA-Z0-9]/g,''),legsId='l'+String(b.betId).replace(/[^a-zA-Z0-9]/g,'');
   var linked=hasLegs?sortedLegs(b).map(function(l){return legGame(l,b)}).filter(Boolean):[],common=linked.length&&linked.every(function(x){return String(x.id)===String(linked[0].id)})?linked[0]:null;
@@ -38,7 +59,7 @@ betCard=function(b){var g=findGame(b),hasLegs=(b.legs||[]).length,closed=authori
   var title=hasLegs?(g?midnightMatchup(g,b.sport):esc(displayBetType(b))):compactBetLine(b,g,b.sport),prop=isPlayerProp(b)&&!hasLegs;
   var pick=prop?'<div class="pick">'+esc(propRequirement(b))+'</div>':'';
   var evidence=!hasLegs&&(closed||finalGame(g)||prop||!fullGameScope(b))?'<div class="grading-evidence">'+esc(gradingEvidence(b,g))+'</div>':'';
-  var html='<div class="card '+(betState(b,g)==='live'?'live':'')+'" data-gameid="'+esc(g&&g.id||betGameId(b))+'"><div class="top"><div><b>'+title+'</b><div class="sub">'+esc(b.sport||'Other')+' · '+esc(displayBetType(b))+'</div></div><div class="status-pack"><button class="status-button" aria-label="Change wager status" onclick="toggleM(\''+id+'\')">'+pill(b,g)+'</button>'+(!closed?wagerBars(b,g):'')+'</div></div>'+pick+'<div class="money">'+resultsMoney(Number(b.risk||0))+' risk → '+resultsMoney(Number(b.toWin||0))+' to win</div>'+midnightGameDetails(g,b.sport)+evidence+(hasLegs?'<button class="expand" aria-controls="'+legsId+'" onclick="toggleLegs(\''+legsId+'\')">'+hasLegs+' legs</button><div class="legs" id="'+legsId+'">'+sortedLegs(b).map(function(l){return legHtml(l,b)}).join('')+'</div>':'')+'<div class="manual" id="'+id+'">'+['won','lost','push','auto'].map(function(s){return '<button onclick="setOv(\''+esc(b.betId)+'\',\''+s+'\')">'+s.charAt(0).toUpperCase()+s.slice(1)+'</button>'}).join('')+'</div></div>';
+  var html='<div class="card '+(betState(b,g)==='live'?'live':'')+'" data-gameid="'+esc(g&&g.id||betGameId(b))+'"><div class="top"><div><b>'+title+'</b></div><div class="status-pack"><button class="status-button" aria-label="Change wager status" onclick="toggleM(\''+id+'\')">'+pill(b,g)+'</button>'+(!closed?wagerBars(b,g):'')+'</div></div>'+pick+'<div class="wager-meta-row"><span class="sub">'+esc(b.sport||'Other')+' · '+esc(displayBetType(b))+'</span><span class="money">'+resultsMoney(Number(b.risk||0))+' risk → '+resultsMoney(Number(b.toWin||0))+' to win</span></div>'+midnightGameDetails(g,b.sport)+evidence+(hasLegs?'<button class="expand" aria-controls="'+legsId+'" onclick="toggleLegs(\''+legsId+'\')">'+hasLegs+' legs</button><div class="legs" id="'+legsId+'">'+sortedLegs(b).map(function(l){return legHtml(l,b)}).join('')+'</div>':'')+'<div class="manual" id="'+id+'">'+['won','lost','push','auto'].map(function(s){return '<button onclick="setOv(\''+esc(b.betId)+'\',\''+s+'\')">'+s.charAt(0).toUpperCase()+s.slice(1)+'</button>'}).join('')+'</div></div>';
   if(!canManualGrade(b,g))html=html.replace(/<button class="status-button"[^>]*>([\s\S]*?)<\/button>/,'<span>$1</span>').replace(/<div class="manual"[\s\S]*?<\/div>/,'');
   return html;
 };
