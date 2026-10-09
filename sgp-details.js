@@ -25,12 +25,12 @@ function propRequirement(l){
 var originalVerifiedPropEval=propEval;
 propEval=function(item,g){var evidence=playerGameEvidence(item,g);if(!evidence.verified)return{status:g&&gs(g)==='in'?'live':'unavailable',locked:false,value:null,target:item.line};return originalVerifiedPropEval(Object.assign({},item,{player:evidence.player||item.player}),g)};
 var originalEvidenceLegStatus=legDisplayStatus;
-legDisplayStatus=function(l,b){if(bookResult({betOnlineStatus:l.status}))return originalEvidenceLegStatus(l,b);if(l.matchIssue)return 'unavailable';if(isPlayerProp(l)){var g=legGame(l,b),e=playerGameEvidence(l,g);if(!e.verified&&!e.pending)return 'unavailable'}return originalEvidenceLegStatus(l,b)};
+legDisplayStatus=function(l,b){if(bookResult({betOnlineStatus:l.status}))return originalEvidenceLegStatus(l,b);if(l.matchIssue)return 'unavailable';if(isPlayerProp(l)){var g=legGame(l,b),e=playerGameEvidence(Object.assign({sport:b.sport},l),g);if(g&&gs(g)==='pre'&&!finalGame(g))return 'pending';if(!e.verified&&!e.pending)return 'unavailable'}return originalEvidenceLegStatus(l,b)};
 var originalDetailedLegHtml=legHtml;
 legHtml=function(l,b){
   if(!isPlayerProp(l)&&!l.matchIssue)return originalDetailedLegHtml(l,b);
-  var g=legGame(l,b),e=playerGameEvidence(l,g);if(l.matchIssue)e={verified:false,issue:l.matchIssue};
+  var g=legGame(l,b),e=playerGameEvidence(Object.assign({sport:b.sport},l),g);if(l.matchIssue)e={verified:false,issue:l.matchIssue};
   var status=legDisplayStatus(l,b),label=status==='won'?'Won':status==='lost'?'Lost':status==='push'?'Push':status==='live'?'Live':status==='unavailable'?'Review':'Upcoming';
   var stat=e.verified?propEval(l,g):null,progress=stat&&stat.value!=null?' · '+stat.value+(stat.target!=null?' / '+stat.target:''):'';
-  return '<div class="leg"><div><div class="legmain">'+esc(propRequirement(l))+'</div><div class="legsub">'+(e.verified?esc((g?enhancedGameDetail(g):'')+progress):esc(e.issue))+'</div>'+(e.verified?'<div class="legsub">'+betMatchupHtml(l,g)+'</div>'+gamecastLink(l.sport||b.sport,resolvedEventId(l,b)):'')+'</div><span class="legstatus '+status+'">'+label+'</span></div>';
+  return '<div class="leg"><div><div class="legmain">'+esc(propRequirement(l))+'</div><div class="legsub">'+(e.verified?esc((g?enhancedGameDetail(g):'')+progress):esc(status==='pending'&&g?'Player stats available after kickoff':e.issue))+'</div>'+(e.verified?'<div class="legsub">'+betMatchupHtml(l,g)+'</div>'+gamecastLink(l.sport||b.sport,resolvedEventId(l,b)):'')+'</div><span class="legstatus '+status+'">'+label+'</span></div>';
 };

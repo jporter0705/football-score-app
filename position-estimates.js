@@ -49,6 +49,8 @@ livePositionHtml=function(item,g){return positionEstimateHtml(item,g)+factualPos
 // Overall parlay position follows the weakest remaining leg, never a multiplied probability.
 function parlayPositionEstimate(b){
   if(!(b.legs||[]).length||authoritativeResult(b))return null;
+  var started=b.legs.some(function(l){var g=legGame(l,b),st=legDisplayStatus(l,b);return ['won','lost','push'].includes(st)||g&&(gs(g)==='in'||finalGame(g))});
+  if(!started)return null;
   var levels=[],pending=false;
   for(var l of b.legs){var st=legDisplayStatus(l,b);if(st==='lost')return {level:1,label:'Very unfavorable',reason:'A leg is lost; sportsbook settlement determines the wager result.'};if(st==='won'||st==='push')continue;var g=legGame(l,b);if(!g||gs(g)!=='in'){pending=true;continue}var e=positionEstimate(Object.assign({sport:b.sport},l),g);if(!e)pending=true;else levels.push(e.level)}
   var level=levels.length?Math.min.apply(null,levels):3;if(pending)level=Math.min(level,3);

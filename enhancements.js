@@ -33,9 +33,9 @@ function gameClock(e){if(gs(e)==='pre')return enhancedGameDetail(e);var st=comp(
 var summaryTimes={},summaryRequests=new Map();
 async function refreshSummaries(){
   var wants={},generation=sessionGeneration;
-  function want(sp,id,g){if(id){var key=(sp==='NFL'?'NFL':'College')+':'+id;wants[key]={sp:sp,id:String(id),final:finalGame(g)}}}
-  S.bets.forEach(function(b){if(isPlayerProp(b)){var g=findGame(b);if(g&&gs(g)!=='pre')want(b.sport,resolvedEventId(b),g)}(b.legs||[]).forEach(function(l){if(isPlayerProp(l)){var g=legGame(l,b);if(g&&gs(g)!=='pre')want(l.sport||b.sport,resolvedEventId(l,b),g)}})});
-  var failed=false,queue=Object.keys(wants).filter(function(key){return !S.summaries[key]||Date.now()-(summaryTimes[key]||0)>(wants[key].final?86400000:30000)});
+  function want(sp,id,g){if(id){var key=(sp==='NFL'?'NFL':'College')+':'+id;wants[key]={sp:sp,id:String(id),final:finalGame(g),pre:g&&gs(g)==='pre'}}}
+  S.bets.forEach(function(b){if(isPlayerProp(b)){var g=findGame(b);if(g)want(b.sport,resolvedEventId(b),g)}(b.legs||[]).forEach(function(l){if(isPlayerProp(l)){var g=legGame(l,b);if(g)want(l.sport||b.sport,resolvedEventId(l,b),g)}})});
+  var failed=false,queue=Object.keys(wants).filter(function(key){return !S.summaries[key]||Date.now()-(summaryTimes[key]||0)>(wants[key].final?86400000:wants[key].pre?300000:30000)});
   async function worker(){while(queue.length){var key=queue.shift(),w=wants[key],requestKey=generation+':'+key;try{
     if(!summaryRequests.has(requestKey))summaryRequests.set(requestKey,fetchSummary(w.sp,w.id));
     var data=await summaryRequests.get(requestKey);

@@ -2,8 +2,9 @@
 function fullGameScope(item){return ['game','full game','full_game'].includes(String(item.scope||item.period||item.segment||'game').toLowerCase())}
 var auditedPropEval=propEval;
 propEval=function(item,g){
-  if(!fullGameScope(item)||item.matchIssue||!g||(!finalGame(g)&&gs(g)!=='in'))return {status:'unavailable',locked:false,value:null,target:item.line};
+  if(!fullGameScope(item)||item.matchIssue||!g)return {status:'unavailable',locked:false,value:null,target:item.line};
   if(item.propType!=='anytime_td'&&(item.line==null||item.line===''||!Number.isFinite(Number(item.line))))return {status:'unavailable',locked:false,value:null,target:null};
+  if(gs(g)==='pre'&&!finalGame(g))return {status:'pending',locked:false,value:null,target:item.line};
   return auditedPropEval(item,g);
 };
 var auditedMarketEval=evaluateMarket;

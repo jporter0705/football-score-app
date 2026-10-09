@@ -108,9 +108,9 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 <button class="tab" data-tab="results">Results</button>
 <button class="tab" data-tab="allgames">All Games</button>
 </div>
-<div style="text-align:right;margin:6px 0"><a href="/upload-bets.html" style="color:#abd8ff;font-size:13px">Import CSV</a></div><div class="toolbar" id="toolbar">
+<div class="toolbar" id="toolbar">
 <select id="weekSelect" aria-label="Betting week"></select><span id="betDates" style="margin-right:auto;font-size:11px;color:var(--muted)" hidden></span>
-<button id="betLogout" hidden type="button">Lock bets</button>
+<button id="betLogout" hidden type="button" class="icon-button" aria-label="Lock bets" title="Lock bets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4"/><path d="M12 14v3"/></svg></button><a id="betImport" class="icon-button" href="/upload-bets.html" aria-label="Import CSV" title="Import CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M13 21H4V3h11l4 4v5M15 3v5h4M7 11h5M7 15h5M9 9v9M15 17l4-4 4 4M19 13v9"/></svg></a>
 <span class="updated" id="updated" role="status" aria-live="polite">Loading…</span>
 <button id="refreshBtn" type="button" aria-label="Refresh scores and bets" title="Refresh scores and bets">↻</button>
 </div>
@@ -123,7 +123,7 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 <section id="allgames" class="view"></section>
 <section id="results" class="view"></section>
 </main>
-<footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.7.1</footer>
+<footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.8.0</footer>
 </div>
 <script>
 var S={collegeAll:[],collegeView:[],nfl:[],bets:[],week:null,lastUpdate:0,summaries:{}};

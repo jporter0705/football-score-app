@@ -24,6 +24,7 @@ function gradingEvidence(item,g){
   if(!g)return 'Score/stat detail unavailable — game not matched';
   if(item.matchIssue)return 'Score/stat detail unavailable — matchup needs review';
   if(isPlayerProp(item)){
+    if(gs(g)==='pre'&&!finalGame(g))return 'Player stats available after kickoff';
     if(!fullGameScope(item))return 'Period-specific player stats unavailable';
     var e=propEval(item,g);return e.value==null?'Player stat unavailable':(finalGame(g)?'Final stat: ':'Current stat: ')+e.value+' · '+propRequirement(item);
   }
