@@ -1,4 +1,5 @@
 const assert=require('node:assert/strict'),{ctx,elements}=require('./test-support-browser.cjs')();
+ctx.selectedWeek={start:'2026-10-06',end:'2026-10-12'};
 const g={id:'123',date:'2026-10-11T20:25:00Z',competitions:[{broadcasts:[{names:['FOX']}],situation:{possession:'b',shortDownDistanceText:'2nd & 6',possessionText:'TB 34',lastPlay:{text:'Four-yard run <safe>'}},status:{displayClock:'8:42',period:2,type:{state:'in'}},competitors:[{id:'a',homeAway:'away',score:'17',team:{id:'a',displayName:'Dallas Cowboys',abbreviation:'DAL',logo:'dal.png'}},{id:'b',homeAway:'home',score:'20',team:{id:'b',displayName:'Tampa Bay Buccaneers',abbreviation:'TB',logo:'tb.png'}}]}]};
 ctx.S.nfl=[g];ctx.S.summaries['NFL:123']={boxscore:{players:[{team:{id:'b'},statistics:[{athletes:[{athlete:{displayName:'John Runner'}}]}]}]}};
 const prop={sport:'NFL',espnEventId:'123',market:'player_prop',player:'John Runner',propType:'anytime_td'};

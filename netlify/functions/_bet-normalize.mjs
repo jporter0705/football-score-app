@@ -1,3 +1,4 @@
+import TeamMatching from '../../team-matching.mjs';
 import { canonicalSport, ownSport, normalizeParentSport } from './_bet-sport.mjs';
 
 const aliases={bet_id:'betId',accepted_date:'acceptedDate',graded_date:'gradedDate',to_win:'toWin',bet_online_status:'betOnlineStatus',raw_wager:'rawWager',raw_row:'rawRow',game_text:'gameText',leg_number:'legNumber',prop_type:'propType',espn_event_id:'espnEventId',away_team:'awayTeam',home_team:'homeTeam',event_date:'eventDate',event_time:'eventTime',event_start:'eventStart',leg_count:'legCount'};
@@ -28,26 +29,15 @@ function teamsFrom(text){
   const m=s.match(/^(.+?)\s+(?:@|at|v|vs\.?|versus)\s+(.+?)(?:\s+-\s+|\s*\||$)/i);
   return m?{awayTeam:m[1],homeTeam:m[2]}:{};
 }
-function teamMatches(c,value){const t=c?.team||{},n=name(value);return !!n&&[t.location,t.displayName,t.shortDisplayName,t.name,t.abbreviation].some(v=>name(v)===n);}
 export function resolveMatch(item,scores={}){
-  const pools=[['NFL',scores.nfl||[]],['College',scores.college||[]]];
-  const sport=canonicalSport(item.sport||item.league);
-  const candidates=[];
-  for(const [sp,pool] of pools){
-    if(sport && sp!==sport)continue;
-    let matches=[];
-    if(item.espnEventId)matches=pool.filter(e=>String(e.id)===String(item.espnEventId));
-    if(!matches.length){
-      if(sp!==sport&&sport)continue;
-      matches=pool.filter(e=>{const cs=e.competitions?.[0]?.competitors||[];
-        if(item.awayTeam&&item.homeTeam)return cs.some(c=>teamMatches(c,item.awayTeam))&&cs.some(c=>teamMatches(c,item.homeTeam))&&!teamMatches(cs.find(c=>teamMatches(c,item.awayTeam)),item.homeTeam);
-        return !item.legs?.length&&['spread','moneyline'].includes(item.market)&&cs.some(c=>teamMatches(c,item.selection));
-      });
-    }
-    for(const e of matches){const cs=e.competitions?.[0]?.competitors||[],away=cs.find(c=>c.homeAway==='away')?.team,home=cs.find(c=>c.homeAway==='home')?.team;
-      if(away&&home)candidates.push({espnEventId:String(e.id),sport:sp,league:sp==='NFL'?'NFL':'NCAA',awayTeam:away.displayName||away.shortDisplayName,homeTeam:home.displayName||home.shortDisplayName});}
+  const sport=canonicalSport(item.sport||item.league),matches=[];
+  for(const [sp,pool] of [['NFL',scores.nfl||[]],['College',scores.college||[]]]){
+    if(sport&&sport!==sp)continue;
+    const e=TeamMatching.resolve(pool,{...item,sport:sp});if(!e)continue;
+    const cs=e.competitions?.[0]?.competitors||[],away=cs.find(c=>c.homeAway==='away')?.team,home=cs.find(c=>c.homeAway==='home')?.team;
+    if(away&&home)matches.push({espnEventId:String(e.id),sport:sp,league:sp==='NFL'?'NFL':'NCAA',awayTeam:away.displayName||away.shortDisplayName,homeTeam:home.displayName||home.shortDisplayName,...(TeamMatching.day(e.date)?{eventDate:TeamMatching.day(e.date)}:{})});
   }
-  return candidates.length===1?candidates[0]:null;
+  return matches.length===1?matches[0]:null;
 }
 function normalizeItem(input,parent={},previous={}){
   // Fresh league evidence must not inherit an old match from another league.

@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),{ctx,run}=require('./test-support-browser.cjs')();
-const g={id:'12',competitions:[{status:{type:{state:'in'}},competitors:[{homeAway:'away',team:{id:'12',displayName:'Kansas City Chiefs'}},{homeAway:'home',team:{id:'15',displayName:'Miami Dolphins'}}]}]};
+const g={id:'12',date:ctx.selectedWeek.start+'T17:00:00Z',competitions:[{status:{type:{state:'in'}},competitors:[{homeAway:'away',team:{id:'12',displayName:'Kansas City Chiefs'}},{homeAway:'home',team:{id:'15',displayName:'Miami Dolphins'}}]}]};
 ctx.S.nfl=[g];ctx.S.collegeAll=[];
 const b={sport:'NFL',structure:'same_game_parlay',espnEventId:'12',awayTeam:'Kansas City Chiefs',homeTeam:'Miami Dolphins',legs:[]};
 const kelce={sport:'NFL',market:'player_prop',propType:'anytime_td',player:'T. Kelce',selection:'T. Kelce',espnEventId:'12',line:.5},walker={...kelce,player:'Kenneth Walker III',selection:'Kenneth Walker III',propType:'rushing_yards',line:69.5,side:'over'};

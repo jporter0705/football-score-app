@@ -1,0 +1,104 @@
+[
+  {
+    "competitions": [
+      {
+        "competitors": [
+          {
+            "homeAway": "home",
+            "score": "14",
+            "team": {
+              "abbreviation": "OKST",
+              "displayName": "Oklahoma State Cowboys",
+              "id": "197",
+              "location": "Oklahoma State",
+              "name": "Cowboys",
+              "shortDisplayName": "Oklahoma St",
+              "uid": "s:20~l:23~t:197"
+            }
+          },
+          {
+            "homeAway": "away",
+            "score": "14",
+            "team": {
+              "abbreviation": "UCF",
+              "displayName": "UCF Knights",
+              "id": "2116",
+              "location": "UCF",
+              "name": "Knights",
+              "shortDisplayName": "UCF",
+              "uid": "s:20~l:23~t:2116"
+            }
+          }
+        ],
+        "status": {
+          "clock": 657,
+          "displayClock": "10:57",
+          "period": 2,
+          "type": {
+            "completed": false,
+            "description": "In Progress",
+            "detail": "10:57 - 2nd Quarter",
+            "id": "2",
+            "name": "STATUS_IN_PROGRESS",
+            "shortDetail": "10:57 - 2nd",
+            "state": "in"
+          }
+        }
+      }
+    ],
+    "date": "2026-10-10T16:00Z",
+    "id": "401856824",
+    "uid": "s:20~l:23~e:401856824"
+  },
+  {
+    "competitions": [
+      {
+        "competitors": [
+          {
+            "homeAway": "home",
+            "score": "0",
+            "team": {
+              "abbreviation": "APP",
+              "displayName": "App State Mountaineers",
+              "id": "2026",
+              "location": "App State",
+              "name": "Mountaineers",
+              "shortDisplayName": "App State",
+              "uid": "s:20~l:23~t:2026"
+            }
+          },
+          {
+            "homeAway": "away",
+            "score": "0",
+            "team": {
+              "abbreviation": "ODU",
+              "displayName": "Old Dominion Monarchs",
+              "id": "295",
+              "location": "Old Dominion",
+              "name": "Monarchs",
+              "shortDisplayName": "Old Dominion",
+              "uid": "s:20~l:23~t:295"
+            }
+          }
+        ],
+        "status": {
+          "clock": 0,
+          "displayClock": "0:00",
+          "period": 0,
+          "type": {
+            "completed": false,
+            "description": "Scheduled",
+            "detail": "Sat, October 10th at 1:00 PM EDT",
+            "id": "1",
+            "name": "STATUS_SCHEDULED",
+            "shortDetail": "10/10 - 1:00 PM EDT",
+            "state": "pre"
+          }
+        }
+      }
+    ],
+    "date": "2026-10-10T17:00Z",
+    "id": "401869843",
+    "uid": "s:20~l:23~e:401869843"
+  }
+]

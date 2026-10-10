@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),{ctx}=require('./test-support-browser.cjs')();
-const g={id:'audit',competitions:[{status:{period:2,displayClock:'0:00',type:{state:'in',description:'Halftime'}},competitors:[{homeAway:'away',score:'20',team:{id:'a',displayName:'Alpha'}},{homeAway:'home',score:'7',team:{id:'b',displayName:'Beta'}}]}]};
+const g={id:'audit',date:ctx.selectedWeek.start+'T17:00:00Z',competitions:[{status:{period:2,displayClock:'0:00',type:{state:'in',description:'Halftime'}},competitors:[{homeAway:'away',score:'20',team:{id:'a',displayName:'Alpha'}},{homeAway:'home',score:'7',team:{id:'b',displayName:'Beta'}}]}]};
 ctx.S.nfl=[g];const b={betId:'audit',sport:'NFL',espnEventId:'audit',market:'spread',selection:'Alpha',line:14};
 assert.match(ctx.livePosition(b,g),/covering by 27.*Halftime.*30:00/);
 assert.equal(ctx.healthHtml(5),'');assert.doesNotMatch(ctx.betCard(b),/Bet health|class="health/);

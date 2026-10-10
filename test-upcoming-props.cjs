@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),{ctx}=require('./test-support-browser.cjs')();
-function game(id,state){return {id,competitions:[{status:{period:state==='pre'?0:2,displayClock:'10:00',type:{state,completed:state==='post'}},competitors:[{homeAway:'away',score:'7',team:{id:'dal',displayName:'Dallas Cowboys'}},{homeAway:'home',score:'0',team:{id:'tb',displayName:'Tampa Bay Buccaneers'}}]}]}}
+function game(id,state){return {id,date:ctx.selectedWeek.start+'T17:00:00Z',competitions:[{status:{period:state==='pre'?0:2,displayClock:'10:00',type:{state,completed:state==='post'}},competitors:[{homeAway:'away',score:'7',team:{id:'dal',displayName:'Dallas Cowboys'}},{homeAway:'home',score:'0',team:{id:'tb',displayName:'Tampa Bay Buccaneers'}}]}]}}
 const pre=game('pre','pre'),live=game('live','in'),post=game('post','post');ctx.S.nfl=[pre,live,post];
 const dak={sport:'NFL',espnEventId:'pre',market:'player_prop',player:'D Prescott',propType:'passing_tds_gte',line:2},pickens={...dak,player:'George Pickens',propType:'anytime_td',line:.5};
 const parent={sport:'NFL',structure:'same_game_parlay',legs:[dak,pickens]};

@@ -9,7 +9,7 @@ function game(id,away,home){return{id,date:'2026-09-27T17:00:00Z',competitions:[
   const incoming={bet_id:'sgp',type:'Same Game Parlay',sport:'NFL',away_team:'Miami Dolphins',home_team:'Kansas City Chiefs',risk:'$20.00',to_win:'100',legs:[{leg_number:1,market:'player_prop',player:'T. Kelce',prop_type:'receiving_yards',side:'gte',line:40,raw:'Player stats - T. Kelce 40+ Receiving yds'}]};
   const copy=JSON.stringify(incoming),n=normal.normalizeBet(incoming,scores);assert.equal(n.espnEventId,'12');assert.equal(n.awayTeam,'Kansas City Chiefs');assert.equal(n.legs[0].espnEventId,'12');assert.equal(n.legs[0].propType,'receiving_yards');assert.equal(n.legs[0].line,39.5);assert.equal(n.legs[0].side,'over');assert.equal(n.risk,20);assert.equal(JSON.stringify(incoming),copy);
   assert.equal(normal.normalizeBet(n,scores).legs[0].line,39.5,'normalization is idempotent');
-  assert.equal(normal.normalizeBet({betId:'straight',sport:'NFL',market:'moneyline',selection:'Chicago Bears'},scores).espnEventId,'11');
+  assert.equal(normal.normalizeBet({betId:'straight',sport:'NFL',market:'moneyline',selection:'Chicago Bears',gameText:'Chicago Bears vs Philadelphia Eagles'},scores).espnEventId,'11');
   assert.equal(normal.normalizeBet({betId:'ambiguous',sport:'NFL',market:'moneyline',selection:'Chicago Bears'},{...scores,nfl:[...scores.nfl,game('13','Chicago Bears','Other Team')]}).espnEventId,undefined,'ambiguous teams remain unmatched');
   const prior={...n,description:'Good description',betOnlineStatus:'WON',status:'WON',legs:[{...n.legs[0],status:'WON'}]};
   const merged=api.mergeBets([prior],normal.reconcileBets([prior],[{betId:'sgp',espn_event_id:null,description:null,status:'PENDING',betOnlineStatus:'PENDING',legs:[]}],scores))[0];

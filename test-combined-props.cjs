@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),{ctx}=require('./test-support-browser.cjs')();
-const g={id:'combined',competitions:[{status:{period:2,type:{state:'in'}},competitors:[{team:{id:'a'}}]}]};
+const g={id:'combined',date:ctx.selectedWeek.start+'T17:00:00Z',competitions:[{status:{period:2,type:{state:'in'}},competitors:[{team:{id:'a'}}]}]};
 function group(name,keys,values){return{name,keys,athletes:[{athlete:{displayName:'Joe Runner'},stats:values}]};}
 const stats=[group('rushing',['rushingYards','rushingTouchdowns'],['50','1']),group('receiving',['receivingYards','receivingTouchdowns'],['35','3']),group('passing',['passingTouchdowns'],['1'])];ctx.S.summaries['NFL:combined']={boxscore:{players:[{team:{id:'a'},statistics:stats}]}};
 const item={sport:'NFL',market:'player_prop',player:'Joe Runner',espnEventId:'combined',propType:'rushing_receiving_yards',line:79.5,side:'over'};

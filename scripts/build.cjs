@@ -2,10 +2,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
-const assets = ['index.html','upload-bets.html','csv-import-ui.mjs','import.html','recovery.html','sgp-details.js','live-progress.js','position-estimates.js','wager-display.js','results.js','results.css','midnight-ui.js','midnight-ui.css','enhancements.js','weeks.js','sw.js','manifest.webmanifest','icon-192.png','icon-512.png'];
+const assets = ['index.html','team-matching.js','upload-bets.html','csv-import-ui.mjs','import.html','recovery.html','sgp-details.js','live-progress.js','position-estimates.js','wager-display.js','results.js','results.css','midnight-ui.js','midnight-ui.css','enhancements.js','weeks.js','sw.js','manifest.webmanifest','icon-192.png','icon-512.png'];
 fs.rmSync(output, {recursive:true, force:true});
 fs.mkdirSync(output, {recursive:true});
-for (const name of assets) fs.copyFileSync(path.join(root,name),path.join(output,name));
+for (const name of assets.filter(n=>n!=='team-matching.js')) fs.copyFileSync(path.join(root,name),path.join(output,name));
+fs.writeFileSync(path.join(output,'team-matching.js'),fs.readFileSync(path.join(root,'team-matching.mjs'),'utf8').replace('export default TeamMatching;',''));
 const imports = path.join(root,'imports');
 if (fs.existsSync(imports)) fs.cpSync(imports,path.join(output,'imports'),{recursive:true});
 
@@ -22,19 +23,18 @@ function legRequirement(l){
   return l.raw||sel;
 }
 
-// ESPN competitors wrap school metadata under competitor.team. Normalize against that object.
-function canonicalTeamMatch(c,name){
-  var t=c&&c.team?c.team:c||{},vals=[t.location,t.displayName,t.shortDisplayName,t.name,t.abbreviation].filter(Boolean),target=schoolNameVariants(name);
-  for(var i=0;i<vals.length;i++){var vv=schoolNameVariants(vals[i]);for(var a=0;a<vv.length;a++)for(var b=0;b<target.length;b++)if(vv[a]===target[b])return true}
-  return false;
-}
-
-// Prefer the imported sport, but if that metadata is wrong, safely recover from the other ESPN pool.
-// Only exactMatchGame results are accepted, so canonical fallback still has to resolve to one matchup.
+// Never fall back from a declared college league into NFL (or vice versa).
+function canonicalTeamMatch(c,name){var t=c&&c.team||c||{},sp=/~l:28~/.test(t.uid||'')?'NFL':'College';return TeamMatching.teamMatches(c,name,sp)}
 function resolveAcrossPools(item,preferredSport){
-  var preferred=eventPoolForSport(preferredSport),g=exactMatchGame(preferred,item);if(g)return{game:g,sport:preferredSport};
-  var other=preferredSport==='NFL'?S.collegeAll:S.nfl,otherSport=preferredSport==='NFL'?'College':'NFL',alt=exactMatchGame(other,item);
-  return alt?{game:alt,sport:otherSport}:null;
+  if(!item)return null;
+  var sp=TeamMatching.sport(item.sport||item.league)||TeamMatching.sport(preferredSport);if(!sp)return null;
+  var itemCache=matchupRenderCache&&matchupRenderCache.get(item),cacheKey=sp+':'+selectedWeek.start+':'+selectedWeek.end;
+  if(itemCache&&itemCache.has(cacheKey))return itemCache.get(cacheKey);
+  var scoped=Object.assign({},item,{sport:sp}),p=TeamMatching.pair(scoped);
+  // Legacy records without an event date must be unique inside their selected game week.
+  var bounds=TeamMatching.eventDay(scoped).provided?{requireStoredId:true}:{start:selectedWeek.start,end:selectedWeek.end,requireStoredId:true};
+  var g=exactMatchGame(eventPoolForSport(sp),scoped,bounds),result=g?{game:g,sport:sp}:null;
+  if(matchupRenderCache){if(!itemCache){itemCache=new Map();matchupRenderCache.set(item,itemCache)}itemCache.set(cacheKey,result)}return result;
 }
 function findGame(b){
   var r=resolveAcrossPools(b,b.sport||'College');
@@ -42,13 +42,14 @@ function findGame(b){
   return r?r.game:null;
 }
 function legGame(leg,parent){
-  var sp=leg.sport||parent.sport||'College',item=Object.assign({sport:sp},leg);
+  var sp=leg.sport||parent.sport||'College',inputCache=matchupRenderCache&&matchupRenderCache.get('legInputs'),byParent=inputCache&&inputCache.get(leg),item=byParent&&byParent.get(parent);
+  if(!item){item=Object.assign({sport:sp},leg);if(matchupRenderCache){if(!inputCache){inputCache=new Map();matchupRenderCache.set('legInputs',inputCache)}if(!byParent){byParent=new Map();inputCache.set(leg,byParent)}byParent.set(parent,item)}}
   if(!item.espnEventId&&parent.structure==='same_game_parlay')item.espnEventId=parent.espnEventId;
   var r=resolveAcrossPools(item,sp);
   if(r&&leg.sport&&leg.sport!==r.sport)leg.sport=r.sport;
   return r?r.game:null;
 }
-function itemMatchesEvent(item,parent,e,sp){var id=resolvedEventId(item,parent);return id?String(id)===String(e.id):false}
+function itemMatchesEvent(item,parent,e,sp){var declared=TeamMatching.sport(item.sport||item.league||(parent&&parent.sport)),requested=sp==='nfl'?'NFL':'College';if(declared&&declared!==requested)return false;var g=parent?legGame(item,parent):findGame(item);return !!g&&String(g.id)===String(e.id)}
 
 function betGames(b){var out=[],seen={};function add(g){if(g&&!seen[String(g.id)]){seen[String(g.id)]=1;out.push(g)}}add(findGame(b));(b.legs||[]).forEach(function(l){add(legGame(l,b))});return out}
 function betKickoff(b){var gs=betGames(b),ts=gs.map(function(g){return Date.parse(g.date||0)||0}).filter(Boolean);return ts.length?Math.min.apply(null,ts):0}
@@ -64,13 +65,13 @@ function sortBets(a,b){
 // Each render gets a fresh cache so refreshed schedules and edited bets are respected.
 var matchupRenderCache=null;
 var uncachedExactMatchGame=exactMatchGame;
-exactMatchGame=function(pool,item){
-  if(!matchupRenderCache||!item)return uncachedExactMatchGame(pool,item);
+exactMatchGame=function(pool,item,options){
+  if(!matchupRenderCache||!item)return uncachedExactMatchGame(pool,item,options);
   var cache=matchupRenderCache.get(pool);
   if(!cache){cache=new Map();matchupRenderCache.set(pool,cache)}
-  var key=JSON.stringify([item.espnEventId||null,item.awayTeam||null,item.homeTeam||null]);
+  var key=JSON.stringify([item.espnEventId||null,item.awayTeam||null,item.homeTeam||null,item.gameText||null,item.sport||null,item.league||null,item.eventDate||null,item.eventStart||null,item.gameDate||null,item.startTime||null,item.expandedText||null,item.raw||null,item.description||null,options||null]);
   if(cache.has(key))return cache.get(key);
-  var result=uncachedExactMatchGame(pool,item);cache.set(key,result);return result;
+  var result=uncachedExactMatchGame(pool,item,options);cache.set(key,result);return result;
 };
 var uncachedRenderAll=renderAll;
 renderAll=function(){
@@ -93,7 +94,7 @@ refreshSummaries=withMatchupRenderCache(refreshSummaries);
 </script>`;
 
 // Enhancements are explicit production dependencies. The compatibility layer follows them so shared resolvers win.
-html = html.replace('</body>','<script src="/enhancements.js?v=4.7.5"></script>'+overrides+'<script src="/sgp-details.js"></script><script src="/live-progress.js"></script><script src="/position-estimates.js"></script><script src="/wager-display.js"></script><link rel="stylesheet" href="/results.css"><script src="/results.js"></script><link rel="stylesheet" href="/midnight-ui.css"><script src="/midnight-ui.js"></script></body>');
+html = html.replace('</body>','<script src="/team-matching.js"></script><script src="/enhancements.js?v=4.7.5"></script>'+overrides+'<script src="/sgp-details.js"></script><script src="/live-progress.js"></script><script src="/position-estimates.js"></script><script src="/wager-display.js"></script><link rel="stylesheet" href="/results.css"><script src="/results.js"></script><link rel="stylesheet" href="/midnight-ui.css"><script src="/midnight-ui.js"></script></body>');
 fs.writeFileSync(indexPath,html);
 console.log('Built app: '+assets.length+' public assets plus named imports and integrated UI enhancements.');
 

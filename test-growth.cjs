@@ -3,7 +3,7 @@ function game(id,away,home,state='pre'){return{id:String(id),date:'2026-09-27T17
 const games=Array.from({length:100},(_,i)=>game(100+i,'Away '+i,'Home '+i,i%3===0?'post':i%3===1?'in':'pre'));
 function bets(n){return Array.from({length:n},(_,i)=>{const x=i%games.length,unmatched=i%10===0;return{betId:'synthetic-'+i,sport:'College',structure:i%4===0?'parlay':'straight',market:'spread',selection:'Away '+x,line:3,risk:10,toWin:9,awayTeam:unmatched?'Unknown '+i:'Away '+x,homeTeam:'Home '+x,legs:i%4===0?Array.from({length:6},(_,l)=>({legNumber:l+1,market:'spread',selection:'Away '+x,line:3,sport:'College',awayTeam:unmatched?'Unknown '+i:'Away '+x,homeTeam:'Home '+x})):[]}})}
 (async()=>{
-  ctx.S.nfl=[];ctx.S.collegeAll=games;ctx.S.collegeView=games;ctx.S.bets=bets(500);ctx.S.week=ctx.selectedWeek;ctx.sport='college';
+  ctx.selectedWeek={start:'2026-09-22',end:'2026-09-28'};ctx.S.nfl=[];ctx.S.collegeAll=games;ctx.S.collegeView=games;ctx.S.bets=bets(500);ctx.S.week=ctx.selectedWeek;ctx.sport='college';
   const financial=ctx.S.bets.map(b=>[b.betId,b.risk,b.toWin,b.line]);const timing={};
   for(const filter of ['all','upcoming','live','closed','review']){ctx.betFilter=filter;const start=performance.now();run('renderBets()');timing[filter]=Math.round(performance.now()-start);assert(timing[filter]<2000,filter+' should stay responsive with 500 bets');assert.equal(ctx.matchupRenderCache,null)}
   const start=performance.now();run('renderAll()');timing.full=Math.round(performance.now()-start);assert(timing.full<2500);assert.deepEqual(ctx.S.bets.map(b=>[b.betId,b.risk,b.toWin,b.line]),financial);

@@ -1,3 +1,4 @@
+import TeamMatching from '../../team-matching.mjs';
 import { csvRows, date, weekFor } from '../../csv-records.mjs';
 import { canonicalFields, normalizeBet, validateRecords } from './_bet-normalize.mjs';
 import { ownSport } from './_bet-sport.mjs';
@@ -42,6 +43,9 @@ function parse(row) {
   if (/parlay|teaser/i.test(row.type) && legs.length < 2) throw Error('Missing parlay or teaser legs');
   if (legs.length) b.legs = legs.map((l,i) => canonicalFields(Object.fromEntries(Object.entries({...l,legNumber:i+1}).filter(([,v]) => v !== null && v !== ''))));
   const sport = ownSport({...b,rawRow:row.raw_row}); if (sport) b.sport = sport;
+  // A multi-game ticket's expanded text may contain several different dates.
+  const evidence=TeamMatching.eventDay({expandedText:legs.length?null:row.expanded_text,eventDate:row.event_date});
+  if(evidence.provided){if(!evidence.day)throw Error('Invalid scheduled game date');b.eventDate=evidence.day;}
   b.source = 'betonline-csv';
   const out = canonicalFields(b); validateRecords([out]); return out;
 }
@@ -50,7 +54,7 @@ function weekFromDay(day) {
 }
 function chooseWeek(b, weeks, explicit) {
   if (explicit) return {week:explicit};
-  const dates = [...new Set((b.legs || []).map(l => l.eventDate).filter(Boolean))];
+  const dates = [...new Set([b.eventDate,...(b.legs || []).map(l => l.eventDate)].filter(Boolean))];
   const eventWeeks = [...new Set(dates.map(weekFromDay).filter(Boolean))];
   if (eventWeeks.length === 1) return {week:eventWeeks[0]};
   const acceptedWeek = weekFor(b.acceptedDate).start;
