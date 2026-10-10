@@ -1,7 +1,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 function node(tag='div'){return {tag,children:[],textContent:'',value:'',hidden:false,checked:false,disabled:false,files:[],append(n){this.children.push(n);},replaceChildren(){this.children=[];}};}
 (async()=>{
- const ids=['login','file','preview','save','unlock','key','confirmed','actions','rows','summary','status'];
+ const ids=['saveReason','login','file','preview','save','unlock','key','confirmed','actions','rows','summary','status'];
  const els=Object.fromEntries(ids.map(id=>[id,node()]));let mode='preview',calls=[];
  const plan={summary:{new:1,updated:0,unchanged:0,review:0},token:'preview-token',weeks:['2026-09-29'],items:[{betId:'test-1',description:'<img src=x onerror=alert(1)>',action:'new',week:'2026-09-29',after:{betOnlineStatus:'PENDING',risk:40,toWin:36.36},changes:[]}]};
  const ctx=vm.createContext({console,Date,Set,Intl,AbortSignal,document:{getElementById:id=>els[id],createElement:node},fetch:async(url,options)=>{
@@ -18,6 +18,7 @@ function node(tag='div'){return {tag,children:[],textContent:'',value:'',hidden:
  mode='stale';await els.save.onclick();assert.equal(els.actions.hidden,true);assert.match(els.status.textContent,/Preview again/);assert.equal(calls.at(-1).token,'preview-token');
  mode='preview';await els.preview.onclick();els.confirmed.checked=true;els.confirmed.onchange();await els.save.onclick();assert.match(els.status.textContent,/Saved 1 new/);assert.equal(els.actions.hidden,true);assert.equal(els.rows.children.length,0);
  await els.preview.onclick();const label=els.rows.children[0].children.find(n=>n.tag==='label'),select=label.children[0];select.value='2026-10-06';await select.onchange();assert.equal(els.save.disabled,true);assert.equal(calls.at(-1).choices['test-1'],'2026-10-06');
+ plan.summary.review=2;plan.items[0].action='review';plan.items[0].row=2;await els.preview.onclick();els.confirmed.checked=true;els.confirmed.onchange();assert.equal(els.save.disabled,true);assert.match(els.saveReason.children[0].textContent,/2 wager.*still need review/);assert.equal(els.saveReason.children[1].href,'#review-row-2');plan.summary.review=0;plan.items[0].action='new';await els.preview.onclick();els.confirmed.checked=true;els.confirmed.onchange();assert.equal(els.save.disabled,false);
  els.file.files=[{name:'bad.json',size:10}];await els.file.onchange();assert.equal(els.preview.disabled,true);assert.equal(els.save.disabled,true);
  for(const asset of ['upload-bets.html','csv-import-ui.mjs'])assert(fs.existsSync('dist/'+asset));
  assert(!fs.existsSync('dist/csv-records.mjs'),'server-only parsing is not published as a data asset');

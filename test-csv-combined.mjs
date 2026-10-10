@@ -1,0 +1,8 @@
+import assert from 'node:assert/strict';
+import {makePlan} from './netlify/functions/_csv-plan.mjs';
+const headers=['bet_id','accepted_date','type','description','risk','to_win','status','leg_count','legs_json'];
+const raw=['Spread - Home Team -5.5','Total points - Over 43.5','Player receiving yards + rushing yards - J. Runner 80+','Player thrown touchdowns + rushing touchdowns - Joe Passer 2+'];
+function file(legs){const row=['combined-test','2026-10-08T12:00:00-07:00','Same Game Parlay','FOOTBALL - NFL - Away Team v Home Team','20','80','PENDING',String(legs.length),JSON.stringify(legs.map(text=>({raw:text,market:'unknown',selection:text})))];return headers.join(',')+'\n'+row.map(v=>'"'+v.replaceAll('"','""')+'"').join(',');}
+const p=makePlan(file(raw),[],{'combined-test':'2026-10-06'});assert.equal(p.summary.review,0);const legs=p.items[0].after.legs;assert.equal(legs[0].market,'spread');assert.equal(legs[0].line,-5.5);assert.equal(legs[1].market,'total');assert.equal(legs[1].line,43.5);assert.equal(legs[2].propType,'rushing_receiving_yards');assert.equal(legs[2].line,79.5);assert.equal(legs[2].side,'over');assert.equal(legs[3].propType,'passing_rushing_tds_gte');assert.equal(legs[3].line,2);
+const repeated=makePlan(file(raw),[{week:'2026-10-06',bets:[p.items[0].after],scores:{}}]);assert.equal(repeated.summary.unchanged,1);assert.equal(repeated.summary.review,0);assert.equal(makePlan(file([raw[0],'Unsupported leg']),[],{'combined-test':'2026-10-06'}).summary.review,1);
+console.log('PASS unknown spread/total recovery, combined prop thresholds, repeat import stability and unresolved-leg safety');

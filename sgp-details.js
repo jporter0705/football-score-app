@@ -18,7 +18,7 @@ function playerGameEvidence(item,g){
 function propRequirement(l){
   var player=l.player||l.selection||'Player',type=l.propType||l.prop_type||'',raw=l.raw||l.description||'';
   if(type==='anytime_td'||/score anytime|anytime td|score a touchdown/i.test(raw))return player+' — Score TD';
-  var units={rushing_yards:'Rushing yds',receiving_yards:'Receiving yds',passing_yards:'Passing yds',passing_tds:'Passing TDs',passing_tds_gte:'Passing TDs',rushing_tds:'Rushing TDs',rushing_tds_gte:'Rushing TDs',receiving_tds:'Receiving TDs',receiving_tds_gte:'Receiving TDs',total_tds:'Total TDs',total_tds_gte:'Total TDs',receptions:'Receptions',passing_interceptions:'Pass interceptions'};
+  var units={rushing_receiving_yards:'Rush + receiving yds',passing_rushing_tds_gte:'Passing + rushing TDs',rushing_yards:'Rushing yds',receiving_yards:'Receiving yds',passing_yards:'Passing yds',passing_tds:'Passing TDs',passing_tds_gte:'Passing TDs',rushing_tds:'Rushing TDs',rushing_tds_gte:'Rushing TDs',receiving_tds:'Receiving TDs',receiving_tds_gte:'Receiving TDs',total_tds:'Total TDs',total_tds_gte:'Total TDs',receptions:'Receptions',passing_interceptions:'Pass interceptions'};
   if(units[type]&&l.line!=null){var line=Number(l.line),under=/under/i.test(l.side||l.selection||'');var target=/_gte$/.test(type)||l.side==='gte'?line+'+':under?'Under '+line:Math.floor(line)+1+'+';return player+' — '+target+' '+units[type]}
   return raw.replace(/^Player (stats|TDs)\s*-\s*/i,'')||l.selection||'Prop';
 }

@@ -8,6 +8,6 @@
 <section><label for="file">BetOnline export (.csv)</label><input id="file" type="file" accept=".csv,text/csv"><p><small>Your file is checked against private app storage. Existing wagers stay in their saved weeks. A recovery copy is made before each changed week is saved.</small></p><button id="preview" disabled>Preview changes</button></section>
 <div id="status" role="status" aria-live="polite">Checking private access…</div>
 <div id="summary"></div><div id="rows"></div>
-<div id="actions" hidden><label><input id="confirmed" type="checkbox">I reviewed these changes.</label><button id="save" disabled>Save changes</button></div>
+<div id="actions" hidden><p id="saveReason" role="status" aria-live="polite"></p><label><input id="confirmed" type="checkbox">I reviewed these changes.</label><button id="save" disabled>Save changes</button></div>
 <p><a href="/recovery.html">Bet backups</a> · Saving uses ordinary app storage, with no AI processing.</p>
 </main><script type="module" src="/csv-import-ui.mjs"></script></body></html>

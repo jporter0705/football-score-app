@@ -123,7 +123,7 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 <section id="allgames" class="view"></section>
 <section id="results" class="view"></section>
 </main>
-<footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.8.1</footer>
+<footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.8.2</footer>
 </div>
 <script>
 var S={collegeAll:[],collegeView:[],nfl:[],bets:[],week:null,lastUpdate:0,summaries:{}};
@@ -266,6 +266,7 @@ function gameProgress(g){
 }
 function summaryFor(id,sp){return S.summaries[(sp==='NFL'?'NFL':'College')+':'+id]||S.summaries[id]||null}
 function findAthleteStat(summary,player,statType){
+  if(statType==='rushing_receiving_yards'){var rush=findAthleteStat(summary,player,'rushing_yards'),rec=findAthleteStat(summary,player,'receiving_yards');return rush==null||rec==null?null:rush+rec;}
   if(!summary||!player)return null;var target=norm(player),out=null;
   (summary.boxscore&&summary.boxscore.players||[]).forEach(function(team){
     (team.statistics||[]).forEach(function(group){
@@ -280,6 +281,7 @@ function findAthleteStat(summary,player,statType){
   });return isFinite(out)?out:null;
 }
 function touchdownCount(summary,player,type){
+  if(type==='passing_rushing_tds_gte'){var pass=touchdownCount(summary,player,'passing_tds'),rush=touchdownCount(summary,player,'rushing_tds');return pass==null||rush==null?null:pass+rush;}
   if(!summary||!player)return null;
   var category=String(type).replace(/_gte$/,''),counts={},seen=false,invalid=false;
   var groups={rushing:'rushingTouchdowns',receiving:'receivingTouchdowns',passing:'passingTouchdowns',kickReturns:'kickReturnTouchdowns',puntReturns:'puntReturnTouchdowns',defensive:'defensiveTouchdowns',interceptions:'interceptionTouchdowns'};
@@ -297,7 +299,7 @@ function touchdownCount(summary,player,type){
   if(counts.defensive!=null)delete counts.interceptions;
   return invalid||!seen?null:Object.values(counts).reduce(function(a,b){return a+b},0);
 }
-function isReversibleStat(type){return type==='rushing_yards'||type==='receiving_yards'||type==='passing_yards'||type==='return_yards'}
+function isReversibleStat(type){return type==='rushing_yards'||type==='receiving_yards'||type==='rushing_receiving_yards'||type==='passing_yards'||type==='return_yards'}
 function propEval(item,g){
   var type=item.propType||item.gradingType||'',sum=summaryFor(item.espnEventId||(g&&g.id),item.sport),line=Number(item.line),state=g?gs(g):'pre';
   if(type==='anytime_td'){
@@ -307,7 +309,7 @@ function propEval(item,g){
     if(state==='post')return{status:'lost',locked:true,value:0,target:1};
     return{status:state==='in'?'live':'pending',locked:false,value:0,target:1};
   }
-  var isTd=/^(total|rushing|receiving|passing)_tds(?:_gte)?$/.test(type);
+  var isTd=/^(total|rushing|receiving|passing|passing_rushing)_tds(?:_gte)?$/.test(type);
   var v=isTd?touchdownCount(sum,item.player,type):findAthleteStat(sum,item.player,type);if(v==null)return{status:state==='in'?'live':'unavailable',locked:false,value:null,target:line};
   var under=String(item.selection||item.side||'').toLowerCase().indexOf('under')>=0;
   if(type==='passing_tds_gte'||String(type).endsWith('_gte')){
@@ -529,5 +531,4 @@ startHistory();setInterval(automaticRefresh,30000);
 </script>
 <p style="text-align:center"><a href="/recovery.html" style="color:#8fb0c9">Bet backups</a></p></body>
 </html>
-
 

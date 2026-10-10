@@ -6,6 +6,13 @@ function ready(){
   $('login').hidden=unlocked;$('file').disabled=busy;
   $('preview').disabled=busy||!csv||!unlocked;
   $('save').disabled=busy||!unlocked||!plan||!!plan.summary.review||!$('confirmed').checked||!(plan.summary.new+plan.summary.updated);
+  const reason=$('saveReason');reason.replaceChildren();
+  if(plan?.summary.review){
+    el('span',`${plan.summary.review} wager(s) still need review. Checking this box does not resolve those rows. `,reason);
+    const first=plan.items.find(item=>item.action==='review');
+    if(first){const link=el('a','Go to first wager needing review',reason);link.href='#review-row-'+first.row;}
+  }else if(plan&&!unlocked)reason.textContent='Unlock private bets before saving.';
+  else if(plan&&!busy&&!$('confirmed').checked)reason.textContent='Check “I reviewed these changes” to enable Save changes.';
   $('unlock').disabled=busy;
   weekInputs.forEach(input=>{input.disabled=busy;});
 }
@@ -19,6 +26,7 @@ function render(){
   $('summary').textContent=`${s.new} new · ${s.updated} updated · ${s.unchanged} unchanged · ${s.review} needs review`;
   for(const item of plan.items){
     const card=el('article','',$('rows'));card.className=item.action;
+    if(item.action==='review')card.id='review-row-'+item.row;
     el('h2',`${item.action==='review'?'Needs review':item.action[0].toUpperCase()+item.action.slice(1)} · Bet ${item.betId||'row '+item.row}`,card);
     el('p',item.description,card);
     if(item.reason)el('p',item.reason,card);

@@ -59,6 +59,14 @@ function normalizeItem(input,parent={},previous={}){
   const x=blend(previous,canonicalFields(input)),raw=clean(x.raw||x.description||x.selection),text=clean([x.description,x.raw,x.rawRow,x.gameText].filter(Boolean).join(' '));
   const teamPoints=raw.match(/^Team (?:points|total)\s*-\s*(.+?)\s+(Over|Under)\s+(\d+(?:\.\d+)?)(?:\s*\(Game\))?$/i);
   if(teamPoints){x.market='team_total';x.selection=teamPoints[1].trim();x.side=teamPoints[2].toLowerCase();x.line=Number(teamPoints[3]);}
+  if(!x.market||x.market==='unknown'){
+    const spread=raw.match(/^Spread\s*-\s*(.+?)\s+([+-]\d+(?:\.\d+)?)$/i);
+    const total=raw.match(/^Total points\s*-\s*(Over|Under)\s+(\d+(?:\.\d+)?)$/i);
+    const combined=raw.match(/^Player\s+(receiving yards\s*\+\s*rushing yards|rushing yards\s*\+\s*receiving yards|thrown touchdowns\s*\+\s*rushing touchdowns)\s*-\s*(.+?)\s+(\d+(?:\.\d+)?)\+$/i);
+    if(spread){x.market='spread';x.selection=spread[1].trim();x.line=Number(spread[2]);}
+    if(total){x.market='total';x.selection=total[1].toLowerCase();x.side=x.selection;x.line=Number(total[2]);}
+    if(combined){x.market='player_prop';x.player=combined[2].trim();x.propType=/yards/i.test(combined[1])?'rushing_receiving_yards':'passing_rushing_tds_gte';x.line=Number(combined[3]);x.side='gte';x.selection=x.player;}
+  }
   x.sport=ownSport(x)||parent.sport||canonicalSport(previous.sport)||(/\b(NCAA|NCAAF|college)\b/i.test(text)?'College':/\bNFL\b/i.test(text)?'NFL':undefined);
   // Keep a previously expanded player name when a later export abbreviates it.
   if(previous.player&&x.player){const a=name(x.player).split(' '),p=name(previous.player).split(' ');if(a[0]?.length===1&&a[0]===p[0]?.[0]&&a.slice(1).join(' ')===p.slice(1).join(' '))x.player=previous.player;}

@@ -33,7 +33,7 @@ function midnightLegProgress(item,g){
     var verification=playerGameEvidence(item,g);if(!verification.verified)return verification.issue;
     if(!fullGameScope(item))return 'Period-specific player stats unavailable';
     var e=propEval(item,g);if(e.value==null)return 'Player stat unavailable';
-    var units={rushing_yards:'rushing yds',receiving_yards:'receiving yds',passing_yards:'passing yds',receptions:'receptions',passing_tds:'passing TDs',passing_tds_gte:'passing TDs',rushing_tds:'rushing TDs',rushing_tds_gte:'rushing TDs',receiving_tds:'receiving TDs',receiving_tds_gte:'receiving TDs',total_tds:'TDs',total_tds_gte:'TDs',anytime_td:'TDs',passing_interceptions:'pass interceptions'};
+    var units={rushing_receiving_yards:'rush + receiving yds',passing_rushing_tds_gte:'passing + rushing TDs',rushing_yards:'rushing yds',receiving_yards:'receiving yds',passing_yards:'passing yds',receptions:'receptions',passing_tds:'passing TDs',passing_tds_gte:'passing TDs',rushing_tds:'rushing TDs',rushing_tds_gte:'rushing TDs',receiving_tds:'receiving TDs',receiving_tds_gte:'receiving TDs',total_tds:'TDs',total_tds_gte:'TDs',anytime_td:'TDs',passing_interceptions:'pass interceptions'};
     return prefix+e.value+' '+(units[item.propType]||'');
   }
   var t=teams(g),a=t.away&&t.away.score,h=t.home&&t.home.score;
