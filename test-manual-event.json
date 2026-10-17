@@ -1,0 +1,53 @@
+{
+  "id": "401864523",
+  "uid": "s:20~l:23~e:401864523",
+  "league": {
+    "id": "23",
+    "slug": "college-football",
+    "abbreviation": "NCAAF"
+  },
+  "competitions": [
+    {
+      "id": "401864523",
+      "uid": "s:20~l:23~e:401864523~c:401864523",
+      "date": "2026-10-18T01:00Z",
+      "status": {
+        "type": {
+          "completed": false,
+          "description": "Scheduled",
+          "detail": "Sat, October 17th at 9:00 PM EDT",
+          "id": "1",
+          "name": "STATUS_SCHEDULED",
+          "shortDetail": "10/17 - 9:00 PM EDT",
+          "state": "pre"
+        }
+      },
+      "competitors": [
+        {
+          "id": "2638",
+          "homeAway": "home",
+          "team": {
+            "id": "2638",
+            "uid": "s:20~l:23~t:2638",
+            "location": "UTEP",
+            "name": "Miners",
+            "displayName": "UTEP Miners",
+            "abbreviation": "UTEP"
+          }
+        },
+        {
+          "id": "23",
+          "homeAway": "away",
+          "team": {
+            "id": "23",
+            "uid": "s:20~l:23~t:23",
+            "location": "San José State",
+            "name": "Spartans",
+            "displayName": "San José State Spartans",
+            "abbreviation": "SJSU"
+          }
+        }
+      ]
+    }
+  ]
+}

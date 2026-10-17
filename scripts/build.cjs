@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
-const assets = ['index.html','team-matching.js','upload-bets.html','csv-import-ui.mjs','import.html','recovery.html','sgp-details.js','live-progress.js','position-estimates.js','wager-display.js','results.js','results.css','midnight-ui.js','midnight-ui.css','enhancements.js','weeks.js','sw.js','manifest.webmanifest','icon-192.png','icon-512.png'];
+const assets = ['index.html','team-matching.js','game-match-ui.js','game-match.css','saved-match-links.js','upload-bets.html','csv-import-ui.mjs','import.html','recovery.html','sgp-details.js','live-progress.js','position-estimates.js','wager-display.js','results.js','results.css','midnight-ui.js','midnight-ui.css','enhancements.js','weeks.js','sw.js','manifest.webmanifest','icon-192.png','icon-512.png'];
 fs.rmSync(output, {recursive:true, force:true});
 fs.mkdirSync(output, {recursive:true});
 for (const name of assets.filter(n=>n!=='team-matching.js')) fs.copyFileSync(path.join(root,name),path.join(output,name));
@@ -33,7 +33,10 @@ function resolveAcrossPools(item,preferredSport){
   var scoped=Object.assign({},item,{sport:sp}),p=TeamMatching.pair(scoped);
   // Legacy records without an event date must be unique inside their selected game week.
   var bounds=TeamMatching.eventDay(scoped).provided?{requireStoredId:true}:{start:selectedWeek.start,end:selectedWeek.end,requireStoredId:true};
-  var g=exactMatchGame(eventPoolForSport(sp),scoped,bounds),result=g?{game:g,sport:sp}:null;
+  var g=exactMatchGame(eventPoolForSport(sp),scoped,bounds);
+  if(g&&scoped.manualMatch){var sum=S.summaries[sp+':'+g.id],h=sum&&sum.header,c=h&&h.competitions&&h.competitions[0],league=h&&h.league;
+    if(h&&String(h.id)===String(g.id)&&c&&league&&league.slug===(sp==='NFL'?'nfl':'college-football')&&String(league.id)===(sp==='NFL'?'28':'23'))g=Object.assign({},h,{date:c.date||g.date,uid:g.uid});}
+  var result=g?{game:g,sport:sp}:null;
   if(matchupRenderCache){if(!itemCache){itemCache=new Map();matchupRenderCache.set(item,itemCache)}itemCache.set(cacheKey,result)}return result;
 }
 function findGame(b){
@@ -69,7 +72,7 @@ exactMatchGame=function(pool,item,options){
   if(!matchupRenderCache||!item)return uncachedExactMatchGame(pool,item,options);
   var cache=matchupRenderCache.get(pool);
   if(!cache){cache=new Map();matchupRenderCache.set(pool,cache)}
-  var key=JSON.stringify([item.espnEventId||null,item.awayTeam||null,item.homeTeam||null,item.gameText||null,item.sport||null,item.league||null,item.eventDate||null,item.eventStart||null,item.gameDate||null,item.startTime||null,item.expandedText||null,item.raw||null,item.description||null,options||null]);
+  var key=JSON.stringify([item.manualMatch||null,item.espnEventId||null,item.awayTeam||null,item.homeTeam||null,item.gameText||null,item.sport||null,item.league||null,item.eventDate||null,item.eventStart||null,item.gameDate||null,item.startTime||null,item.expandedText||null,item.raw||null,item.description||null,options||null]);
   if(cache.has(key))return cache.get(key);
   var result=uncachedExactMatchGame(pool,item,options);cache.set(key,result);return result;
 };
@@ -94,7 +97,7 @@ refreshSummaries=withMatchupRenderCache(refreshSummaries);
 </script>`;
 
 // Enhancements are explicit production dependencies. The compatibility layer follows them so shared resolvers win.
-html = html.replace('</body>','<script src="/team-matching.js"></script><script src="/enhancements.js?v=4.7.5"></script>'+overrides+'<script src="/sgp-details.js"></script><script src="/live-progress.js"></script><script src="/position-estimates.js"></script><script src="/wager-display.js"></script><link rel="stylesheet" href="/results.css"><script src="/results.js"></script><link rel="stylesheet" href="/midnight-ui.css"><script src="/midnight-ui.js"></script></body>');
+html = html.replace('</body>','<script src="/team-matching.js"></script><script src="/enhancements.js?v=4.7.5"></script>'+overrides+'<script src="/sgp-details.js"></script><script src="/live-progress.js"></script><script src="/position-estimates.js"></script><script src="/wager-display.js"></script><link rel="stylesheet" href="/results.css"><script src="/results.js"></script><link rel="stylesheet" href="/midnight-ui.css"><script src="/midnight-ui.js"></script><link rel="stylesheet" href="/game-match.css"><script src="/saved-match-links.js"></script></body>');
 fs.writeFileSync(indexPath,html);
 console.log('Built app: '+assets.length+' public assets plus named imports and integrated UI enhancements.');
 

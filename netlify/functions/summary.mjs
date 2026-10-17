@@ -1,7 +1,7 @@
 import { json,store } from './_archive.mjs';
 import { finalEvent } from './_score-policy.mjs';
 const pending=new Map();
-async function summary(sport,id){
+export async function summary(sport,id){
   const key='summary/'+sport+'/'+id,cache=store();let old;
   try{old=await cache.get(key,{type:'json',consistency:'strong'})}catch{}
   const ttl=old?.final?86400000:30000;

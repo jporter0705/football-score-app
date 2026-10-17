@@ -33,7 +33,7 @@ var summaryTimes={},summaryRequests=new Map();
 async function refreshSummaries(){
   var wants={},generation=sessionGeneration;
   function want(sp,id,g){if(id){var key=(sp==='NFL'?'NFL':'College')+':'+id;wants[key]={sp:sp,id:String(id),final:finalGame(g),pre:g&&gs(g)==='pre'}}}
-  S.bets.forEach(function(b){if(isPlayerProp(b)){var g=findGame(b);if(g)want(b.sport,resolvedEventId(b),g)}(b.legs||[]).forEach(function(l){if(isPlayerProp(l)){var g=legGame(l,b);if(g)want(l.sport||b.sport,resolvedEventId(l,b),g)}})});
+  S.bets.forEach(function(b){[b].concat(b.legs||[]).forEach(function(x){if(x.manualMatch){var g=findGame(Object.assign({sport:b.sport},x));want(x.sport||b.sport,x.manualMatch.eventId,g);var key=((x.sport||b.sport)==='NFL'?'NFL':'College')+':'+x.manualMatch.eventId;if(wants[key])wants[key].pre=false;}});if(isPlayerProp(b)){var g=findGame(b);if(g)want(b.sport,resolvedEventId(b),g)}(b.legs||[]).forEach(function(l){if(isPlayerProp(l)){var g=legGame(l,b);if(g)want(l.sport||b.sport,resolvedEventId(l,b),g)}})});
   var failed=false,queue=Object.keys(wants).filter(function(key){return !S.summaries[key]||Date.now()-(summaryTimes[key]||0)>(wants[key].final?86400000:wants[key].pre?300000:30000)});
   async function worker(){while(queue.length){var key=queue.shift(),w=wants[key],requestKey=generation+':'+key;try{
     if(!summaryRequests.has(requestKey))summaryRequests.set(requestKey,fetchSummary(w.sp,w.id));

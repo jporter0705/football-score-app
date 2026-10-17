@@ -2,6 +2,7 @@ import TeamMatching from '../../team-matching.mjs';
 import { csvRows, date, weekFor } from '../../csv-records.mjs';
 import { canonicalFields, normalizeBet, validateRecords } from './_bet-normalize.mjs';
 import { ownSport } from './_bet-sport.mjs';
+import {applyMatches,targets,validateMatches} from './_manual-match.mjs';
 
 const statuses = new Set(['PENDING','WON','LOST','PUSH','VOID','CANCELLED','CANCELED']);
 const stable = value => JSON.stringify(sort(value));
@@ -50,7 +51,7 @@ function parse(row) {
   const out = canonicalFields(b); validateRecords([out]); return out;
 }
 function weekFromDay(day) {
-  try { return weekFor(date(day)).start; } catch { return null; }
+  const scheduled=TeamMatching.day(day);return scheduled?weekFor(scheduled+'T12:00:00Z').start:null;
 }
 function chooseWeek(b, weeks, explicit) {
   if (explicit) return {week:explicit};
@@ -83,7 +84,8 @@ function mergedRecord(previous, incoming, scores) {
   });
   return normalizeBet(b,scores,previous || {});
 }
-export function makePlan(csv, weeks, choices = {}) {
+export function makePlan(csv, weeks, choices = {}, matches = {}) {
+  matches=validateMatches(matches);
   const rows = csvRows(csv);
   if (!rows.length || rows.length > 500) throw Error('Choose a CSV containing 1–500 wagers');
   const existing = new Map(), counts = new Map();
@@ -97,21 +99,31 @@ export function makePlan(csv, weeks, choices = {}) {
       if (counts.get(row.bet_id) > 1) throw Error('Duplicate Bet ID in this CSV');
       const recovered=recoverTeamTotal(row);
       const input=recovered||row;
-      const b = parse(input), matches = existing.get(b.betId) || [];
-      if (matches.length > 1) throw Error('This Bet ID is already saved in multiple weeks; resolve it before importing');
+      const b = parse(input), priorMatches = existing.get(b.betId) || [];
+      if (priorMatches.length > 1) throw Error('This Bet ID is already saved in multiple weeks; resolve it before importing');
       if (input.extraction_error) throw Error('Exporter warning: '+input.extraction_error);
       if(recovered)item.notice='Team total recovered from the complete wager description.';
-      const prior = matches[0], destination = prior ? {week:prior.week} : chooseWeek(b,weeks,Object.hasOwn(choices,b.betId)?choices[b.betId]:null);
+      const prior = priorMatches[0], destination = prior ? {week:prior.week} : chooseWeek(b,weeks,Object.hasOwn(choices,b.betId)?choices[b.betId]:null);
       Object.assign(item,destination,{existing:!!prior,risk:b.risk,status:b.betOnlineStatus});
       if (!destination.week) return item;
-      const w = weeks.find(w => w.week === destination.week), next = mergedRecord(prior?.bet,b,w?.scores || {});
+      const w = weeks.find(w => w.week === destination.week), normalized=mergedRecord(prior?.bet,b,w?.scores || {});
+      item.matchingTargets=targets(normalized,w?.scores||{});
+      const next=applyMatches(normalized,matches);
       if((next.legs||[]).some(l=>!l.market||l.market==='unknown'))throw Error('Unrecognized wager leg; review its original description before importing');
       item.after = next; item.before = prior?.bet || null; item.description = next.description;
+      item.matchingTargets=targets(next,w?.scores||{});
       item.action = !prior ? 'new' : stable(next) === stable(prior.bet) ? 'unchanged' : 'updated';
       item.changes = prior ? Object.keys(next).filter(k => stable(next[k]) !== stable(prior.bet[k])) : [];
       return item;
     } catch (e) { item.reason = e.message; return item; }
   });
+  // Explicit related-game choices may include saved wagers absent from this CSV.
+  for(const [id,saved] of existing){
+    if(counts.has(id)||!saved.some(x=>targets(x.bet).some(t=>Object.hasOwn(matches,t.key))))continue;
+    const item={betId:id,existing:true,description:saved[0].bet.description,action:'review',notice:'Saved wager included by your related-game confirmation.'};
+    try{if(saved.length!==1)throw Error('This Bet ID is saved in multiple weeks; resolve it before matching');const prior=saved[0],w=weeks.find(w=>w.week===prior.week),after=applyMatches(prior.bet,matches);Object.assign(item,{week:prior.week,before:prior.bet,after,action:stable(after)===stable(prior.bet)?'unchanged':'updated',matchingTargets:targets(after,w?.scores||{}),changes:['espnEventId','manualMatch','legs'].filter(k=>stable(after[k])!==stable(prior.bet[k]))});}catch(e){item.reason=e.message;}
+    items.push(item);
+  }
   const summary = {new:0,updated:0,unchanged:0,review:0}; items.forEach(i => summary[i.action]++);
   return {items,summary,count:rows.length};
 }

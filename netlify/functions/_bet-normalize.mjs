@@ -21,7 +21,7 @@ export function validateRecords(bets){
   }
 }
 function blend(old={},incoming={}){
-  const x={...old,...incoming};for(const key of metadata)if(incoming[key]==null||incoming[key]==='')if(old[key]!=null)x[key]=old[key];
+  const x={...old,...incoming};if(old.manualMatch){x.manualMatch=old.manualMatch;x.espnEventId=old.manualMatch.eventId;}else delete x.manualMatch;for(const key of metadata)if(incoming[key]==null||incoming[key]==='')if(old[key]!=null)x[key]=old[key];
   return x;
 }
 function teamsFrom(text){
@@ -42,6 +42,7 @@ export function resolveMatch(item,scores={}){
 function normalizeItem(input,parent={},previous={}){
   // Fresh league evidence must not inherit an old match from another league.
   const incomingSport=ownSport(input),oldSport=ownSport(previous);
+  if(previous.manualMatch&&incomingSport&&incomingSport!==previous.manualMatch.sport)throw Error('A manually matched wager has conflicting league evidence. Review its game match.');
   if(incomingSport&&oldSport&&incomingSport!==oldSport){
     previous={...previous};
     for(const key of ['sport','league','espnEventId','awayTeam','homeTeam','eventDate','eventStart'])delete previous[key];
@@ -79,9 +80,9 @@ export function normalizeBet(input,scores={},previous={}){
   const incoming=canonicalFields(input);let x=normalizeItem(incoming,{},previous);
   const type=String(x.type||x.structure||'').toLowerCase();
   x.structure=/same.?game/.test(type)?'same_game_parlay':/teaser/.test(type)?'teaser':/parlay/.test(type)?'parlay':x.structure||(x.legs?.length>1?'parlay':'straight');
-  const resolved=resolveMatch(x,scores);if(resolved)Object.assign(x,resolved);
+  const resolved=resolveMatch(x,scores);if(resolved&&!x.manualMatch)Object.assign(x,resolved);
   const legs=Array.isArray(incoming.legs)&&incoming.legs.length?incoming.legs:previous.legs||x.legs;
-  if(Array.isArray(legs)){x.legs=legs.map((l,i)=>{const num=l.legNumber??i+1,old=(previous.legs||[]).find((p,j)=>(p.legNumber??j+1)===num)||{};const leg=normalizeItem({...l,legNumber:num},x,old);const match=resolveMatch(leg,scores);if(match)Object.assign(leg,match);return leg;});}
+  if(Array.isArray(legs)){x.legs=legs.map((l,i)=>{const num=l.legNumber??i+1,old=(previous.legs||[]).find((p,j)=>(p.legNumber??j+1)===num)||{};const leg=normalizeItem({...l,legNumber:num},x,old);const match=resolveMatch(leg,scores);if(match&&!leg.manualMatch)Object.assign(leg,match);return leg;});}
   if(x.structure==='same_game_parlay'&&x.espnEventId)(x.legs||[]).forEach(l=>{if(l.espnEventId&&l.espnEventId!==x.espnEventId)l.matchIssue='Leg points to a different game';else delete l.matchIssue;});
   if(!resolved)x=normalizeParentSport(x);delete x.replaceLegs;
   return Object.fromEntries(Object.entries(x).filter(([,v])=>v!==undefined));

@@ -1,10 +1,13 @@
 const $=id=>document.getElementById(id);
 let csv='',choices={},plan=null,busy=false,unlocked=false,fileVersion=0,weekInputs=[];
+const params=typeof location!=='undefined'?new URLSearchParams(location.search):null;
+const savedMode=params?.get('saved')==='1',focusBet=params?.get('betId')||undefined;
+let matches={};
 const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n||0);
 function el(tag,text,parent){const n=document.createElement(tag);n.textContent=text;parent.append(n);return n;}
 function ready(){
   $('login').hidden=unlocked;$('file').disabled=busy;
-  $('preview').disabled=busy||!csv||!unlocked;
+  $('preview').disabled=busy||(!csv&&!savedMode)||!unlocked;
   $('save').disabled=busy||!unlocked||!plan||!!plan.summary.review||!$('confirmed').checked||!(plan.summary.new+plan.summary.updated);
   const reason=$('saveReason');reason.replaceChildren();
   if(plan?.summary.review){
@@ -14,6 +17,7 @@ function ready(){
   }else if(plan&&!unlocked)reason.textContent='Unlock private bets before saving.';
   else if(plan&&!busy&&!$('confirmed').checked)reason.textContent='Check “I reviewed these changes” to enable Save changes.';
   $('unlock').disabled=busy;
+  const clear=$('clearMatches');if(clear){clear.hidden=!Object.keys(matches).length;clear.disabled=busy;}
   weekInputs.forEach(input=>{input.disabled=busy;});
 }
 function invalidate(){plan=null;$('confirmed').checked=false;$('actions').hidden=true;ready();}
@@ -44,21 +48,29 @@ function render(){
       select.onchange=async()=>{if(busy)return;choices[item.betId]=select.value;if(!select.value)delete choices[item.betId];invalidate();$('status').textContent='Checking your updated week…';await $('preview').onclick();};
     }
     if(item.changes?.length){const d=el('details','',card);el('summary','See changed fields',d);for(const k of item.changes)el('pre',k+': '+JSON.stringify(item.before[k]??null)+' → '+JSON.stringify(item.after[k]),d);}
+    if(typeof mountGameMatch==='function')for(const target of item.matchingTargets||[])mountGameMatch(card,target,{
+      isBusy:()=>busy,setBusy:v=>{busy=v;ready();},
+      find:(input,targetKey)=>api('/api/game-match',{action:'find',mode:savedMode?'saved':'csv',csv,choices,input,targetKey}),
+      onChoose:async selected=>{matches={...matches,...selected};await $('preview').onclick();}
+    });
     if(item.after?.legs?.length){const d=el('details','',card);el('summary',item.after.legs.length+' legs',d);for(const leg of item.after.legs)el('p',leg.raw||[leg.selection,leg.side,leg.line,leg.period].filter(v=>v!=null&&v!=='').join(' '),d);}
   }
   $('actions').hidden=!(s.new+s.updated+s.review);$('confirmed').checked=false;ready();
 }
 $('file').onchange=async()=>{
-  const version=++fileVersion;csv='';choices={};invalidate();$('rows').replaceChildren();$('summary').textContent='';
+  const version=++fileVersion;csv='';choices={};matches={};invalidate();$('rows').replaceChildren();$('summary').textContent='';
   try{const file=$('file').files[0];if(!file)return;if(!/\.csv$/i.test(file.name)||file.size>1_900_000)throw Error('Choose a BetOnline CSV smaller than 1.9 MB.');const text=await file.text();if(version!==fileVersion)return;csv=text;$('status').textContent='File ready. Preview changes to compare it with saved wagers.';}catch(e){$('status').textContent=e.message;}ready();
 };
-$('preview').onclick=async()=>{busy=true;invalidate();ready();$('status').textContent='Comparing with saved bets…';try{plan=await api('/api/csv-import',{action:'preview',csv,choices});render();$('status').textContent=plan.summary.review?'Some rows still need review. Choose a week where requested; the preview refreshes automatically. Exporter warnings must be resolved before saving.':'Preview ready. No bets have been changed.';}catch(e){$('status').textContent=e.message;}finally{busy=false;ready();}};
+$('preview').onclick=async()=>{busy=true;invalidate();ready();$('status').textContent='Comparing with saved bets…';try{plan=await api(savedMode?'/api/game-match':'/api/csv-import',{action:savedMode?'previewSaved':'preview',csv,choices,matches,betId:focusBet});render();$('status').textContent=plan.summary.review?'Some rows still need review. Choose a week where requested; the preview refreshes automatically. Exporter warnings must be resolved before saving.':'Preview ready. No bets have been changed.';}catch(e){$('status').textContent=e.message;}finally{busy=false;ready();}};
 $('confirmed').onchange=ready;
+if($('clearMatches'))$('clearMatches').onclick=async()=>{if(busy)return;matches={};await $('preview').onclick();};
 $('save').onclick=async()=>{
   if($('save').disabled)return;busy=true;ready();$('status').textContent='Saving reviewed changes…';
-  try{const result=await api('/api/csv-import',{action:'save',csv,choices,token:plan.token});invalidate();$('rows').replaceChildren();$('summary').textContent='Import complete';$('status').textContent=`Saved ${result.summary.new} new · ${result.summary.updated} updated. ${result.summary.unchanged} unchanged. Return to bets and refresh.`;}
+  try{const result=await api(savedMode?'/api/game-match':'/api/csv-import',{action:savedMode?'saveSaved':'save',csv,choices,matches,betId:focusBet,token:plan.token});invalidate();$('rows').replaceChildren();$('summary').textContent='Import complete';$('status').textContent=`Saved ${result.summary.new} new · ${result.summary.updated} updated. ${result.summary.unchanged} unchanged. Return to bets and refresh.`;}
   catch(e){invalidate();$('status').textContent=e.message+' Preview again to check what saved before retrying. Matching Bet IDs will not be added twice.';}
   finally{busy=false;ready();}
 };
-$('unlock').onclick=async()=>{busy=true;ready();try{await api('/api/session',{key:$('key').value});$('key').value='';unlocked=true;$('status').textContent='Unlocked. Choose a CSV or preview your selected file.';}catch(e){$('status').textContent=e.message;}finally{busy=false;ready();}};
+$('unlock').onclick=async()=>{busy=true;ready();try{await api('/api/session',{key:$('key').value});$('key').value='';unlocked=true;if(savedMode)setTimeout(()=>$('preview').onclick(),0);$('status').textContent='Unlocked. Choose a CSV or preview your selected file.';}catch(e){$('status').textContent=e.message;}finally{busy=false;ready();}};
 try{const r=await fetch('/api/session',{cache:'no-store'});unlocked=r.ok&&(await r.json()).authenticated;$('status').textContent=unlocked?'Choose your latest BetOnline CSV.':'Unlock private bets to preview and save.';}catch{$('status').textContent='Could not check access. Try unlocking again.';}ready();
+
+if(savedMode){if($('pageTitle'))$('pageTitle').textContent='Match saved games';if($('intro'))$('intro').textContent='Find the correct ESPN game, confirm it, then save. Original bet details and official results stay intact.';$('file').parentElement.hidden=true;$('preview').textContent='Review saved games';$('file').parentElement.after($('preview'));if(unlocked)await $('preview').onclick();}

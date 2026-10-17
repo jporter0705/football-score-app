@@ -4,7 +4,7 @@ import { validWeek, listWeeks, readWeek, bettingWeek, json } from './_archive.mj
 import { updatePrivateBets } from './_bet-backups.mjs';
 import { makePlan, stable } from './_csv-plan.mjs';
 
-async function loadWeeks(choices) {
+export async function loadWeeks(choices={}) {
   const store = betStore(), keys = new Set(await listWeeks());
   for await (const page of store.list({prefix:'week/',paginate:true})) for (const b of page.blobs) if (validWeek(b.key.slice(5))) keys.add(b.key.slice(5));
   Object.values(choices).forEach(k => keys.add(k));
@@ -15,10 +15,10 @@ async function loadWeeks(choices) {
   }
   return weeks;
 }
-function tokenFor(plan, weeks) {
+export function tokenFor(plan, weeks) {
   return createHmac('sha256',process.env.BET_ACCESS_TOKEN).update(stable({items:plan.items,revisions:weeks.map(w=>[w.week,w.revision])})).digest('hex');
 }
-async function lock() {
+export async function lock() {
   const store=betStore(),key='csv-import-lock',old=await store.getWithMetadata(key,{type:'json',consistency:'strong'});
   if (old?.data?.expires > Date.now()) throw Object.assign(Error('Another CSV import is saving. Try again shortly.'),{status:409});
   const id=randomUUID(), saved=await store.setJSON(key,{id,expires:Date.now()+120000},old?{onlyIfMatch:old.etag}:{onlyIfNew:true});
@@ -36,9 +36,9 @@ export default async request => {
     if(typeof body.csv !== 'string' || !['preview','save'].includes(body.action)) throw Error('Choose a CSV and preview it first');
     if(!choices || typeof choices !== 'object' || Array.isArray(choices) || Object.keys(choices).length>500 || Object.values(choices).some(w=>!validWeek(w))) throw Error('Choose valid Tuesday-start weeks');
     if(body.action === 'save') unlock=await lock();
-    let weeks=await loadWeeks(choices),plan=makePlan(body.csv,weeks,choices);
+    let weeks=await loadWeeks(choices),plan=makePlan(body.csv,weeks,choices,body.matches);
     const missing=[...new Set(plan.items.map(i=>i.week).filter(w=>w&&!weeks.some(x=>x.week===w)))];
-    if(missing.length){weeks=await loadWeeks({...choices,...Object.fromEntries(missing.map((w,i)=>['extra'+i,w]))});plan=makePlan(body.csv,weeks,choices);}
+    if(missing.length){weeks=await loadWeeks({...choices,...Object.fromEntries(missing.map((w,i)=>['extra'+i,w]))});plan=makePlan(body.csv,weeks,choices,body.matches);}
     const token=tokenFor(plan,weeks);
     if(body.action === 'preview') return json({...plan,token,weeks:weeks.map(w=>w.week)});
     if(!equal(body.token,token)) return json({error:'Saved bets or game information changed. Preview again before saving.',repreview:true},409);

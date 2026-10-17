@@ -14,8 +14,8 @@ var TeamMatching=(function(){
   ];
   // Deliberately do not equate OSU/MSU, Miami, USC, Louisiana, or directional schools.
   var mascots=['wildcats','bearcats','cougars','red raiders','raiders','bears','eagles','seahawks','commanders','bills','chargers','49ers','cardinals','vikings','ducks','panthers','tigers','bulldogs','aggies','horned frogs','knights','huskies','spartans','wolverines','mountaineers','cyclones','cowboys','sooners','longhorns','jayhawks','utes','buffaloes','buffs','falcons','rams','trojans','bruins','beavers','sun devils','blue devils','fighting irish','gamecocks','volunteers','vols','razorbacks','rebels','crimson tide','buckeyes','nittany lions','boilermakers','hoosiers','terrapins','terps','scarlet knights','hawkeyes','badgers','golden gophers','cornhuskers','hurricanes','seminoles','gators','yellow jackets','demon deacons','orange','cardinal','golden bears','tar heels','wolfpack','cavaliers','hokies','mustangs','green wave','mean green','golden eagles','owls','bobcats','warhawks','ragin cajuns','jaguars','blazers','miners','roadrunners','rainbow warriors','broncos','aztecs','bulldogs','lobos','wolf pack' ,'monarchs','minutemen','chanticleers','blue hens','bearkats'].sort(function(a,b){return b.length-a.length}),cache=new Map();
-  function clean(v){return String(v||'').toLowerCase().replace(/&/g,' and ').replace(/[.'’]/g,'').replace(/[^a-z0-9]+/g,' ').trim().replace(/\bst\b/g,'state').replace(/\buniv\b/g,'university').replace(/\s+/g,' ')}
-  function sport(v){var s=clean(v);return /^(nfl|national football league)$/.test(s)?'NFL':/^(college|ncaa|ncaaf|college football)$/.test(s)?'College':''}
+  function clean(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/&/g,' and ').replace(/[.'’]/g,'').replace(/[^a-z0-9]+/g,' ').trim().replace(/\bst\b/g,'state').replace(/\buniv\b/g,'university').replace(/\s+/g,' ')}
+  function sport(v){if(v==='NFL'||v==='College')return v;var s=clean(v);return /^(nfl|national football league)$/.test(s)?'NFL':/^(college|ncaa|ncaaf|college football)$/.test(s)?'College':''}
   function key(v,sp){var k=sp+':'+v;if(cache.has(k))return cache.get(k);var s=clean(v),without=s;
     mascots.some(function(m){if(s.endsWith(' '+m)){without=s.slice(0,-m.length-1);return true}return false});
     s=without.replace(/^university of /,'').replace(/ university$/,'');
@@ -42,6 +42,7 @@ var TeamMatching=(function(){
   function eventSport(e){var uid=String(e.uid||e.competitions&&e.competitions[0]&&e.competitions[0].uid||'');return /~l:23~/.test(uid)?'College':/~l:28~/.test(uid)?'NFL':''}
   function resolve(pool,item,options){if(!item)return null;options=options||{};var sp=sport(item.sport||item.league)||sport(options.sport),p=pair(item),date=eventDay(item);
     if(sport(item.sport)&&sport(item.league)&&sport(item.sport)!==sport(item.league))return null;
+    if(item.manualMatch){var m=item.manualMatch;if(m.version!==1||m.sport!==sp||String(item.espnEventId)!==String(m.eventId))return null;var found=(pool||[]).filter(function(e){return String(e.id)===String(m.eventId)&&(!eventSport(e)||eventSport(e)===sp)});if(found.length>1)return null;if(found.length)return found[0];var snap=m.event;return snap&&String(snap.id)===String(m.eventId)&&snap.sport===sp?snap:null;}
     if(date.provided&&!date.day)return null;
     if(options.requireStoredId&&item.espnEventId&&!(pool||[]).some(function(e){return String(e.id)===String(item.espnEventId)}))return null;
     var candidates=(pool||[]).filter(function(e){var esp=eventSport(e);if(sp&&esp&&sp!==esp)return false;
