@@ -16,7 +16,7 @@ function mountGameMatch(parent,target,options){
       var teams=c.event.competitions[0].competitors,away=teams.find(x=>x.homeAway==='away'),home=teams.find(x=>x.homeAway==='home');
       add('strong',away.team.displayName+' at '+home.team.displayName,result);
       add('p',new Date(c.event.date).toLocaleString([],{weekday:'short',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'})+' · '+c.event.sport+' · ESPN '+c.event.id,result);
-      var ack=null;if(c.warnings.length){var warning=add('p',c.warnings.join(' '),result);warning.className='match-warning';var a=add('label','',result);ack=add('input','',a);ack.type='checkbox';add('span','I checked the team/date differences and this is the correct game.',a);}
+      var ack=null;if(c.warnings.length){var warning=add('p',c.warnings.join(' '),result);warning.className='match-warning';var a=add('label','',result);ack=add('input','',a);ack.type='checkbox';add('span','I checked the teams, league and date and this is the correct game.',a);}
       var reuse=null,others=c.confirmations.filter(x=>x.key!==target.key);
       if(others.length){var r=add('label','',result);reuse=add('input','',r);reuse.type='checkbox';add('span','Also use for '+others.length+' related wager/leg'+(others.length===1?'':'s')+' with the same matchup, league and date.',r);var related=add('details','',result);add('summary','See affected wagers',related);others.forEach(x=>add('small','Bet '+x.betId+(x.legNumber?' · leg '+x.legNumber:'')+' ',related));}
       var use=add('button','Use This Game',result);use.type='button';use.disabled=!!ack;if(ack)ack.onchange=function(){use.disabled=!ack.checked};

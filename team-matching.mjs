@@ -38,7 +38,7 @@ var TeamMatching=(function(){
     var text=[item.expandedText,item.expanded_text,item.raw,item.description,item.gameText].filter(Boolean).join(' '),m=text.match(/\|\s*(\d{2}\/\d{2}\/\d{4})\s*\|/);
     return {provided:!!m,day:m?day(m[1]):null};
   }
-  function pair(item){if(item.awayTeam&&item.homeTeam)return [item.awayTeam,item.homeTeam];var s=String(item.gameText||'').replace(/^Football\s*-\s*(?:NFL|NCAA)\s*-\s*/i,''),m=s.match(/^(.+?)\s+(?:at|vs\.?|v|@)\s+(.+?)(?:\s+-\s+|\s*\||$)/i);return m?[m[1].trim(),m[2].trim()]:null}
+  function pair(item){if(item.awayTeam&&item.homeTeam)return [item.awayTeam,item.homeTeam];var s=String(item.gameText||item.description||item.raw||'').replace(/^Mobile\s*-\s*/i,'').replace(/^Football\s*-\s*(?:NFL|NCAA)\s*-\s*/i,'').replace(/^(?:NFL|NCAAF) Game Props\s*-\s*/i,''),m=s.match(/^(.+?)\s+(?:at|vs\.?|versus|v|@)\s+(.+?)(?:\s+-\s+|\s*\||$)/i);return m?[m[1].trim(),m[2].trim()]:null}
   function eventSport(e){var uid=String(e.uid||e.competitions&&e.competitions[0]&&e.competitions[0].uid||'');return /~l:23~/.test(uid)?'College':/~l:28~/.test(uid)?'NFL':''}
   function resolve(pool,item,options){if(!item)return null;options=options||{};var sp=sport(item.sport||item.league)||sport(options.sport),p=pair(item),date=eventDay(item);
     if(sport(item.sport)&&sport(item.league)&&sport(item.sport)!==sport(item.league))return null;

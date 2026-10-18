@@ -1,0 +1,41 @@
+"bet_id","accepted_date","graded_date","description","type","sport","league","risk","to_win","status","comment","game_text","rotation","market","selection","side","line","odds","period","leg_count","legs_json","parlay_team_count","expanded_text","raw_row","raw_selection","raw_detail_json","extraction_error"
+"1006556268-1","10/17/26 10:54 PM GMT-7","10/17/26 11:45 PM GMT-7","Mobile - NEBRASKA at OREGON - Moneyline - OREGON","Live","","","15.00","56.25","WON","-","","","moneyline","OREGON","","","","game","0","[]","","Description: Mobile - NEBRASKA at OREGON - Moneyline - OREGON
+Type:
+Live
+Comment:
+-
+Bet ID:
+1006556268-1
+Accepted Date:
+10/17/26 10:54 PM GMT-7
+Graded Date:
+10/17/26 11:45 PM GMT-7
+Risk:
+$15.00
+To Win:
+$56.25
+Status:
+WON
+PRINT","10/17/26 
+NEBRASKA at OREGON - Moneyline - OREGON
+ Live $15.00 $56.25 WON","NEBRASKA at OREGON - Moneyline - OREGON","{""bet_id"":""1006556268-1"",""accepted_date"":""10/17/26 10:54 PM GMT-7"",""graded_date"":""10/17/26 11:45 PM GMT-7"",""description_raw"":""Description: Mobile - NEBRASKA at OREGON - Moneyline - OREGON"",""type_raw"":""Live"",""risk_raw"":""$15.00"",""to_win_raw"":""$56.25"",""status_raw"":""WON"",""comment_raw"":""-"",""collapsed_row_raw"":""10/17/26 \nNEBRASKA at OREGON - Moneyline - OREGON\n Live $15.00 $56.25 WON"",""expanded_panel_raw"":""Description: Mobile - NEBRASKA at OREGON - Moneyline - OREGON\nType:\nLive\nComment:\n-\nBet ID:\n1006556268-1\nAccepted Date:\n10/17/26 10:54 PM GMT-7\nGraded Date:\n10/17/26 11:45 PM GMT-7\nRisk:\n$15.00\nTo Win:\n$56.25\nStatus:\nWON\nPRINT""}",""
+"1006552542-1","10/17/26 10:31 PM GMT-7","10/17/26 10:48 PM GMT-7","Mobile - NEBRASKA at OREGON - Side [3rd Quarter] - OREGON -6.5","Live","","","15.00","0.00","LOST","-","","","spread","OREGON","","-6.5","","third_quarter","0","[]","","Description: Mobile - NEBRASKA at OREGON - Side [3rd Quarter] - OREGON -6.5
+Type:
+Live
+Comment:
+-
+Bet ID:
+1006552542-1
+Accepted Date:
+10/17/26 10:31 PM GMT-7
+Graded Date:
+10/17/26 10:48 PM GMT-7
+Risk:
+$15.00
+To Win:
+$0.00
+Status:
+LOST
+PRINT","10/17/26 
+NEBRASKA at OREGON - Side [3rd Quarter] - OREGON -6.5
+ Live $15.00 $0.00 LOST","NEBRASKA at OREGON - Side [3rd Quarter] - OREGON -6.5","{""bet_id"":""1006552542-1"",""accepted_date"":""10/17/26 10:31 PM GMT-7"",""graded_date"":""10/17/26 10:48 PM GMT-7"",""description_raw"":""Description: Mobile - NEBRASKA at OREGON - Side [3rd Quarter] - OREGON -6.5"",""type_raw"":""Live"",""risk_raw"":""$15.00"",""to_win_raw"":""$0.00"",""status_raw"":""LOST"",""comment_raw"":""-"",""collapsed_row_raw"":""10/17/26 \nNEBRASKA at OREGON - Side [3rd Quarter] - OREGON -6.5\n Live $15.00 $0.00 LOST"",""expanded_panel_raw"":""Description: Mobile - NEBRASKA at OREGON - Side [3rd Quarter] - OREGON -6.5\nType:\nLive\nComment:\n-\nBet ID:\n1006552542-1\nAccepted Date:\n10/17/26 10:31 PM GMT-7\nGraded Date:\n10/17/26 10:48 PM GMT-7\nRisk:\n$15.00\nTo Win:\n$0.00\nStatus:\nLOST\nPRINT""}",""

@@ -25,9 +25,8 @@ function blend(old={},incoming={}){
   return x;
 }
 function teamsFrom(text){
-  const s=clean(text).replace(/^FOOTBALL\s*-\s*(?:NFL|NCAA)\s*-\s*/i,'').replace(/^(?:NFL|NCAAF) Game Props\s*-\s*/i,'');
-  const m=s.match(/^(.+?)\s+(?:@|at|v|vs\.?|versus)\s+(.+?)(?:\s+-\s+|\s*\||$)/i);
-  return m?{awayTeam:m[1],homeTeam:m[2]}:{};
+  const p=TeamMatching.pair({gameText:clean(text)});
+  return p?{awayTeam:p[0],homeTeam:p[1]}:{};
 }
 export function resolveMatch(item,scores={}){
   const sport=canonicalSport(item.sport||item.league),matches=[];
@@ -62,7 +61,7 @@ function normalizeItem(input,parent={},previous={}){
   // Keep a previously expanded player name when a later export abbreviates it.
   if(previous.player&&x.player){const a=name(x.player).split(' '),p=name(previous.player).split(' ');if(a[0]?.length===1&&a[0]===p[0]?.[0]&&a.slice(1).join(' ')===p.slice(1).join(' '))x.player=previous.player;}
   if(x.sport)x.league=x.sport==='NFL'?'NFL':'NCAA';
-  const pair=teamsFrom(x.gameText||raw);x.awayTeam=x.awayTeam||pair.awayTeam||parent.awayTeam;x.homeTeam=x.homeTeam||pair.homeTeam||parent.homeTeam;
+  const pair=teamsFrom(x.gameText||x.description||raw);x.awayTeam=x.awayTeam||pair.awayTeam||parent.awayTeam;x.homeTeam=x.homeTeam||pair.homeTeam||parent.homeTeam;
   if(parent.structure==='same_game_parlay'&&!x.espnEventId)x.espnEventId=parent.espnEventId;
   if(!x.market&&/spread/i.test(x.type||''))x.market='spread';if(!x.market&&/moneyline/i.test(x.type||''))x.market='moneyline';if(!x.market&&/total/i.test(x.type||''))x.market='total';
   const ml=raw.match(/money\s*line\s*-\s*(.+?)(?:\s*\(|$)/i);

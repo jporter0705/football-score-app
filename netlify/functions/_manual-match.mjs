@@ -30,10 +30,13 @@ const signature=data=>createHmac('sha256',process.env.BET_ACCESS_TOKEN).update(J
 const identity=t=>JSON.stringify([t.key,t.sport,t.date,t.pair?.map(n=>T.key(n,t.sport)).sort()||null]);
 export function groupKey(t){return t.sport&&t.date&&t.pair?.length===2?JSON.stringify([t.sport,t.date,t.pair.map(n=>T.key(n,t.sport)).sort()]):null;}
 export function warningsFor(t,event){
-  if(!t.sport||t.sport!==event.sport)throw Error('Wrong league. NCAA wagers can only use NCAA games; NFL wagers can only use NFL games.');
-  if(t.league&&T.sport(t.league)&&T.sport(t.league)!==t.sport)throw Error('Conflicting wager league. Resolve the league before matching.');
+  const sport=T.sport(t.sport),league=T.sport(t.league);
+  if(sport&&sport!==event.sport||league&&league!==event.sport)throw Error('Wrong league. NCAA wagers can only use NCAA games; NFL wagers can only use NFL games.');
   const warnings=[];
-  if(!t.pair||!T.resolve([event],{sport:t.sport,awayTeam:t.pair[0],homeTeam:t.pair[1]}))warnings.push('Teams differ from the original BetOnline matchup or cannot be verified.');
+  const sameTeams=t.pair&&T.resolve([event],{sport:event.sport,awayTeam:t.pair[0],homeTeam:t.pair[1]});
+  if(!sport&&!sameTeams)throw Error('The wager has no league. Both original opponents must match ESPN before its league can be confirmed.');
+  if(!sport)warnings.push('Original league is unavailable. Verify the ESPN league below.');
+  if(!sameTeams)warnings.push('Teams differ from the original BetOnline matchup or cannot be verified.');
   if(!t.date)warnings.push('Original scheduled date is unavailable. Verify the date below.');
   else if(t.date!==T.day(event.date))warnings.push('Scheduled date differs from the original wager ('+t.date+').');
   return warnings;
@@ -48,7 +51,15 @@ export function verifiedEvent(header,id,sport){
   return {id,date:c.date,sport:actual,uid:'s:20~l:'+(actual==='NFL'?'28':'23')+'~e:'+id,competitions:[{id,date:c.date,status:{type:{state:'pre',completed:false}},competitors:c.competitors.map(x=>({homeAway:x.homeAway,team:{id:String(x.team.id),uid:x.team.uid,location:x.team.location,displayName:x.team.displayName,shortDisplayName:x.team.shortDisplayName,abbreviation:x.team.abbreviation,name:x.team.name}}))}]};
 }
 export async function findCandidate(input,target,lookup){
-  const id=eventId(input),sp=T.sport(target.sport);if(!sp)throw Error('The wager needs a known NFL or NCAA league before matching.');
+  const id=eventId(input),sp=T.sport(target.sport)||T.sport(target.league);
+  if(!sp){
+    if(!target.pair)throw Error('The wager needs both original opponents before its league can be confirmed.');
+    const found=[];
+    for(const sport of ['NFL','College']){let data;try{data=await lookup(sport==='NFL'?'nfl':'college',id)}catch{continue;}
+      try{found.push(verifiedEvent(data.header,id,sport))}catch{continue;}}
+    if(found.length!==1)throw Error('ESPN could not verify one NFL or NCAA game. Check the ID and try again.');
+    return candidateFor(found[0],target);
+  }
   let data;try{data=await lookup(sp==='NFL'?'nfl':'college',id)}catch{throw Error('ESPN could not find this game or is temporarily unavailable. Check the ID and try again.');}
   const event=verifiedEvent(data.header,id,sp);return candidateFor(event,target);
 }
@@ -64,9 +75,10 @@ export function applyMatches(record,matches={}){
     const {receipt,acknowledged}=choice,p=receipt?.payload;
     if(!p||!equal(receipt.signature,signature(p))||p.expires<Date.now()||p.identity!==identity(t))throw Error('Game confirmation expired or this wager changed. Find the game again.');
     const warnings=warningsFor(t,p.event);if(warnings.length&&acknowledged!==true)throw Error('Review and acknowledge the game differences before confirming.');
-    const match={version:1,eventId:p.event.id,sport:t.sport,event:p.event,confirmedAt:new Date(p.expires-30*60000).toISOString(),warningsAcknowledged:!!warnings.length};
+    const match={version:1,eventId:p.event.id,sport:p.event.sport,event:p.event,confirmedAt:new Date(p.expires-30*60000).toISOString(),warningsAcknowledged:!!warnings.length};
     const item=t.legNumber?b.legs.find((l,i)=>(l.legNumber??i+1)===t.legNumber):b;
     item.manualMatch=match;item.espnEventId=match.eventId;
+    if(!t.sport){item.sport=match.sport;item.league=match.sport==='NFL'?'NFL':'NCAA';}
   }
   return b;
 }
