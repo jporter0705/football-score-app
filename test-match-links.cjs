@@ -1,0 +1,30 @@
+const assert=require('node:assert/strict'),{ctx}=require('./test-support-browser.cjs')();
+ctx.selectedWeek={start:'2026-10-13',end:'2026-10-19'};
+function game(id,away,home,state='pre',sport='NFL'){
+ return {id,date:'2026-10-18T17:00:00Z',uid:'s:20~l:'+(sport==='NFL'?'28':'23')+'~e:'+id,competitions:[{status:{displayClock:'7:00',period:2,type:{state,completed:state==='post'}},competitors:[{homeAway:'away',score:'10',team:{id:id+'a',displayName:away,abbreviation:away.split(' ').pop()}},{homeAway:'home',score:'7',team:{id:id+'h',displayName:home,abbreviation:home.split(' ').pop()}}]}]};
+}
+const g1=game('101','New England Patriots','New York Jets','in'),g2=game('102','San Francisco 49ers','Seattle Seahawks');
+ctx.S.nfl=[g1,g2];
+const a={sport:'NFL',market:'spread',selection:'New England Patriots',line:-1,espnEventId:'101'},b={sport:'NFL',market:'spread',selection:'San Francisco 49ers',line:-1.5,espnEventId:'102'};
+const ticket={betId:'teaser-1',sport:'NFL',structure:'teaser',risk:40,toWin:33.33,legs:[a,b]};
+const matchLinks=html=>(html.match(/>Match ESPN game<\/a>/g)||[]).length;
+let html=ctx.betCard(ticket);assert.equal(matchLinks(html),0,'two matched games need no matching link on parent or legs');assert.doesNotMatch(html,/no ESPN match|Game details unavailable|score-inset/);
+assert.match(html,/Covering by 2/);assert.match(html,/Not started/);
+html=ctx.betCard({...ticket,structure:'parlay'});assert.equal(matchLinks(html),0);assert.doesNotMatch(html,/no ESPN match/);
+const missing={...b,espnEventId:'999',awayTeam:'Unknown',homeTeam:'Another'};
+html=ctx.betCard({...ticket,legs:[a,missing]});assert.equal(matchLinks(html),1,'only the missing leg gets a matching link');assert.match(html,/Game not matched/);assert.doesNotMatch(html,/Game details unavailable|score-inset/,'one matched leg must not become a shared parent scoreboard');
+html=ctx.betCard({...ticket,legs:[{...missing,espnEventId:'998'},missing]});assert.equal(matchLinks(html),2,'all unmatched legs remain individually correctable without a redundant parent link');
+html=ctx.betCard({...ticket,espnEventId:'101'});assert.equal(matchLinks(html),0);assert.doesNotMatch(html,/score-inset/,'legacy parent event must not stand for different leg games');
+const single={...a,betId:'single',risk:10,toWin:9};assert.equal(matchLinks(ctx.betCard(single)),0);assert.equal(matchLinks(ctx.betCard({...single,espnEventId:'999'})),1);
+const sgp={...ticket,structure:'same_game_parlay',espnEventId:'101',legs:[a,{...a,market:'moneyline',line:undefined}]};
+html=ctx.betCard(sgp);assert.equal(matchLinks(html),0);assert.equal((html.match(/class="score-inset"/g)||[]).length,1,'same-game parent still shows its shared live scoreboard');
+html=ctx.betCard({...sgp,legs:[a,missing]});assert.equal(matchLinks(html),1);assert.doesNotMatch(html,/score-inset/);
+const prop={...a,market:'player_prop',selection:undefined,player:'Unknown Player',propType:'rushing_yards',line:49.5,side:'over'};
+html=ctx.legHtml(prop,ticket);assert.equal(matchLinks(html),0,'missing player evidence does not mean the ESPN game is unmatched');assert.match(html,/Player verification pending|Player not verified/);
+html=ctx.legHtml({...a,matchIssue:'Leg points to a different game'},ticket);assert.equal(matchLinks(html),1,'explicit event conflicts retain a correction link');
+const manual={version:1,eventId:'101',sport:'NFL',event:{...g1,sport:'NFL'}};
+html=ctx.betCard({...single,manualMatch:manual});assert.match(html,/Change matched game/);assert.equal(matchLinks(html),0);
+html=ctx.legHtml({...a,manualMatch:manual},ticket);assert.match(html,/Change matched game/);assert.equal(matchLinks(html),0);
+ctx.S.collegeAll=[game('103','Nebraska Cornhuskers','Oregon Ducks','pre','College')];
+html=ctx.betCard({...ticket,legs:[a,{sport:'College',espnEventId:'103',market:'moneyline',selection:'Oregon'}]});assert.equal(matchLinks(html),0,'mixed-league legs use their own matched games');assert.doesNotMatch(html,/no ESPN match/);
+console.log('PASS matching-link visibility: multi-game teaser/parlay, partial/all unmatched, legacy parents, shared SGP, props, explicit conflicts, manual changes and mixed leagues');
