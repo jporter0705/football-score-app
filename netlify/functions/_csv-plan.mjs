@@ -1,6 +1,6 @@
 import TeamMatching from '../../team-matching.mjs';
 import { csvRows, date, weekFor } from '../../csv-records.mjs';
-import { canonicalFields, normalizeBet, validateRecords } from './_bet-normalize.mjs';
+import { canonicalFields, normalizeBet, validateRecords, repairSavedMetadata } from './_bet-normalize.mjs';
 import { ownSport } from './_bet-sport.mjs';
 import {applyMatches,targets,validateMatches} from './_manual-match.mjs';
 
@@ -121,7 +121,7 @@ export function makePlan(csv, weeks, choices = {}, matches = {}) {
   for(const [id,saved] of existing){
     if(counts.has(id)||!saved.some(x=>targets(x.bet).some(t=>Object.hasOwn(matches,t.key))))continue;
     const item={betId:id,existing:true,description:saved[0].bet.description,action:'review',notice:'Saved wager included by your related-game confirmation.'};
-    try{if(saved.length!==1)throw Error('This Bet ID is saved in multiple weeks; resolve it before matching');const prior=saved[0],w=weeks.find(w=>w.week===prior.week),after=applyMatches(prior.bet,matches);Object.assign(item,{week:prior.week,before:prior.bet,after,action:stable(after)===stable(prior.bet)?'unchanged':'updated',matchingTargets:targets(after,w?.scores||{}),changes:['espnEventId','manualMatch','legs'].filter(k=>stable(after[k])!==stable(prior.bet[k]))});}catch(e){item.reason=e.message;}
+    try{if(saved.length!==1)throw Error('This Bet ID is saved in multiple weeks; resolve it before matching');const prior=saved[0],w=weeks.find(w=>w.week===prior.week),after=applyMatches(repairSavedMetadata(prior.bet,w?.scores||{}),matches);Object.assign(item,{week:prior.week,before:prior.bet,after,action:stable(after)===stable(prior.bet)?'unchanged':'updated',matchingTargets:targets(after,w?.scores||{}),changes:['espnEventId','manualMatch','legs'].filter(k=>stable(after[k])!==stable(prior.bet[k]))});}catch(e){item.reason=e.message;}
     items.push(item);
   }
   const summary = {new:0,updated:0,unchanged:0,review:0}; items.forEach(i => summary[i.action]++);

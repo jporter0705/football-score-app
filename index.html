@@ -123,7 +123,7 @@ select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 <section id="allgames" class="view"></section>
 <section id="results" class="view"></section>
 </main>
-<footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.8.7</footer>
+<footer>Refreshes only while app is visible • ESPN + BetOnline data • build v4.8.8</footer>
 </div>
 <script>
 var S={collegeAll:[],collegeView:[],nfl:[],bets:[],week:null,lastUpdate:0,summaries:{}};
@@ -444,17 +444,19 @@ function renderScoreboard(){
   document.getElementById('scoreboard').innerHTML=leagueControls(true)+'<div class="weekline"><b>Tracked Games</b><span>$ bet-linked · ★ starred</span></div>'+(items.length?items.map(function(x){return gameCard(x.e,x.sp)}).join(''):'<div class="empty">No tracked games yet.</div>');
   bindLeagueControls();attachStars();
 }
+function betLeague(b){var s=String(b.sport||b.league||'').toLowerCase();return s==='nfl'?'NFL':['college','ncaa','ncaaf'].includes(s)?'College':'Other'}
+function betSportMatches(b,filter){return filter==='all'||betLeague(b)===(filter==='nfl'?'NFL':filter==='college'?'College':'Other')}
 function renderBets(){
   var w=0,l=0,p=0,pl=0,risk=0;
-  var selectedBets=S.bets.filter(function(b){return betSport==='all'||(betSport==='nfl'?b.sport==='NFL':b.sport==='College')});
+  var selectedBets=S.bets.filter(function(b){return betSportMatches(b,betSport)});
   selectedBets.forEach(function(b){var r=authoritativeResult(b)||parlayAutoResult(b)||result(b,findGame(b));if(r==='won'){w++;pl+=profit(b)}else if(r==='lost'){l++;pl-=Number(b.risk||0)}else if(r==='push')p++;else risk+=Number(b.risk||0)});
   var cards=selectedBets.filter(function(b){
     var stateOk=betFilter==='all'||betState(b,findGame(b))===betFilter;
-    var sportOk=betSport==='all'||(betSport==='nfl'?b.sport==='NFL':b.sport!=='NFL');
+    var sportOk=betSportMatches(b,betSport);
     return stateOk&&sportOk;
   }).sort(sortBets);
   var stateFilters=['all','live','upcoming','review','closed'].map(function(x){return '<button class="filter '+(betFilter===x?'active':'')+'" data-f="'+x+'">'+x.charAt(0).toUpperCase()+x.slice(1)+'</button>'}).join('');
-  var sportFilters=[['all','All'],['nfl','NFL'],['college','College']].map(function(x){return '<button class="filter '+(betSport===x[0]?'active':'')+'" data-s="'+x[0]+'">'+x[1]+'</button>'}).join('');
+  var sportFilters=[['all','All'],['nfl','NFL'],['college','College']].concat(S.bets.some(function(b){return betLeague(b)==='Other'})||betSport==='other'?[['other','Other']]:[]).map(function(x){return '<button class="filter '+(betSport===x[0]?'active':'')+'" data-s="'+x[0]+'">'+x[1]+'</button>'}).join('');
   var dates=document.getElementById('betDates');dates.hidden=true;dates.textContent=S.week&&S.week.label?S.week.label:'Current week';
   document.getElementById('bets').innerHTML='<div class="summary"><div class="sum"><b>'+selectedBets.length+'</b> bets</div><div class="sum" aria-label="'+w+' wins, '+l+' losses, '+p+' pushes"><b><span class="record-win">'+w+'</span><span class="record-separator">–</span><span class="record-loss">'+l+'</span><span class="record-separator">–</span><span class="record-push">'+p+'</span></b> <span class="record-win">W</span><span class="record-separator">–</span><span class="record-loss">L</span><span class="record-separator">–</span><span class="record-push">P</span></div><div class="sum"><b>$'+risk.toFixed(0)+'</b> open risk</div><div class="sum '+(pl>=0?'plpos':'plneg')+'"><b>'+(pl>=0?'+':'')+'$'+pl.toFixed(2)+'</b> P/L</div></div><div class="bet-filters"><div class="filters" role="group" aria-label="Wager status">'+stateFilters+'</div><div class="filters sport-filters" role="group" aria-label="Wager sport">'+sportFilters+'</div></div>'+(cards.length?cards.map(betCard).join(''):'<div class="empty">No wagers match these filters.</div>');
   document.querySelectorAll('[data-f]').forEach(function(b){b.onclick=function(){betFilter=b.dataset.f;renderBets()}});

@@ -1,0 +1,33 @@
+const assert=require('node:assert/strict'),h=require('./test-support-netlify.cjs')();
+(async()=>{
+ const n=await h.moduleFor('_bet-normalize'),m=await h.moduleFor('game-match'),p=await h.moduleFor('_private');
+ const g={id:'401858493',uid:'s:20~l:23~e:401858493',date:'2026-10-17T02:00Z',competitions:[{competitors:[{homeAway:'away',team:{id:'1',displayName:'Washington Huskies'}},{homeAway:'home',team:{id:'2',displayName:'Purdue Boilermakers'}}]}]};
+ const scores={nfl:[],college:[g]},week='2026-10-13';
+ const b={betId:'1006022741-1',awayTeam:'Mobile - WASHINGTON',homeTeam:'PURDUE',market:'spread',selection:'PURDUE',line:-.5,period:'third_quarter',status:'WON',betOnlineStatus:'WON',risk:25,toWin:30,description:'Mobile - WASHINGTON at PURDUE - Side [3rd Quarter] - PURDUE -0.5',acceptedDate:'2026-10-16T23:00:00-07:00'};
+ const a=n.repairSavedMetadata(b,scores);assert.equal(a.sport,'College');assert.equal(a.league,'NCAA');assert.equal(a.espnEventId,g.id);assert.equal(a.awayTeam,'Washington Huskies');
+ for(const k of ['betId','risk','toWin','status','betOnlineStatus','period','line','description','acceptedDate'])assert.equal(a[k],b[k]);
+ assert.equal(n.repairSavedMetadata(a,scores),a,'repair is idempotent');assert.equal(n.normalizeBet(b,scores,a).sport,'College','dirty reimport cannot restore polluted metadata');
+ const late={...a,betId:'late-3',eventDate:'2026-10-17'};assert.equal(n.repairSavedMetadata(late,scores).eventDate,'2026-10-16');
+ for(const bad of [{...late,espnEventId:undefined},{...late,homeTeam:'Another School'},{...late,sport:'NFL',league:'NFL'},{...late,eventDate:'2026-10-18'},{...late,raw:'Game | 10/17/2026 |'}])assert.equal(n.repairSavedMetadata(bad,scores).eventDate,bad.eventDate,'insufficient or conflicting date evidence must not repair');
+ assert.equal(n.repairSavedMetadata(late,{college:[g,g]}).eventDate,late.eventDate,'ambiguous event identity must not repair');
+ const sj={...g,id:'401864495',date:'2026-09-04T22:30Z',competitions:[{competitors:[{homeAway:'away',team:{displayName:'San José State Spartans'}},{homeAway:'home',team:{displayName:'Eastern Michigan Eagles'}}]}]};
+ const corrupt={...a,betId:'encoding-1',espnEventId:sj.id,awayTeam:'San JosÃ© State Spartans',homeTeam:'Eastern Michigan Eagles',selection:'San JosÃ© State Spartans',eventDate:'2026-09-04',raw:'Moneyline - San JosÃ© State Spartans',market:'moneyline'};
+ const repaired=n.repairSavedMetadata(corrupt,{college:[sj]});assert.equal(repaired.awayTeam,'San José State Spartans');assert.equal(repaired.selection,'San José State Spartans');assert.equal(repaired.raw,corrupt.raw);
+ const parlay={...a,betId:'repair-leg',structure:'parlay',legs:[{...b,legNumber:1},{...a,legNumber:2}]};const lp=n.repairSavedMetadata(parlay,scores);assert.equal(lp.legs[0].sport,'College');assert.equal(lp.legs[1],parlay.legs[1]);
+ await h.getStore('football-score-history').setJSON('week/'+week,{week:{start:week},...scores});await h.getStore('football-private-bets').setJSON('week/'+week,{bets:[b,late]});
+ const auth={cookie:'football_session='+p.session(),origin:'https://example.netlify.app'};
+ const call=async body=>{const r=await m.default(h.request('game-match','POST',body,auth));return {status:r.status,data:await r.json()}};
+ let preview=await call({action:'previewSaved'});assert.equal(preview.data.summary.updated,2);assert(preview.data.items[0].changes.includes('sport'));assert.equal((await h.getStore('football-private-bets').get('week/'+week)).bets[0].sport,undefined,'preview is read-only');
+ assert.equal((await call({action:'saveSaved',token:'stale'})).status,409);
+ h.state.onSet=async key=>key.startsWith('football-private-bets/backup/')?{modified:false}:undefined;assert.notEqual((await call({action:'saveSaved',token:preview.data.token})).status,200);assert.equal((await h.getStore('football-private-bets').get('week/'+week)).bets[0].sport,undefined);h.state.onSet=null;
+ preview=await call({action:'previewSaved'});assert.equal((await call({action:'saveSaved',token:preview.data.token})).status,200);
+ const stored=(await h.getStore('football-private-bets').get('week/'+week)).bets;assert.equal(stored[0].sport,'College');assert.equal(stored[1].eventDate,'2026-10-16');assert.equal((await call({action:'previewSaved'})).data.summary.updated,0);
+ const {ctx,elements}=require('./test-support-browser.cjs')();let summary={innerHTML:''};ctx.document.querySelector=q=>q==='#bets .summary'?summary:null;
+ const records=[{...a,betId:'c-loss',sport:'College',risk:97.14,status:'LOST',betOnlineStatus:'LOST'}, {...b,betId:'unknown'}, {...a,betId:'n-open',sport:'NFL',risk:40,status:'PENDING',betOnlineStatus:'PENDING'}];ctx.S.bets=records;
+ for(const [sport,value] of [['all','−$67.14'],['college','−$97.14'],['other','+$30']]){ctx.betSport=sport;ctx.renderBets();assert(summary.innerHTML.includes(value),summary.innerHTML);}
+ assert.match(elements.bets.innerHTML,/data-s="other"/);
+ const bounds={start:'2026-01-01',end:'2026-12-31'},net=sp=>ctx.resultsAggregate(records,bounds,sp).net;
+ assert.equal(Math.round(net('All')*100),Math.round((net('NFL')+net('College')+net('Other'))*100));assert.equal(net('Other'),30);assert.equal(ctx.betLeague({league:'NCAA'}),'College');
+ ctx.resultsRecords=records;ctx.renderResults();assert.match(elements.results.innerHTML,/resultsSet\('sport','Other'\)/);
+ console.log('PASS metadata cleanup, exact Purdue correction, encoding, narrow UTC recovery, source/league/opponent guards, leg isolation, backup/CAS save, idempotence and Bets/Results Other reconciliation');
+})().catch(e=>{console.error(e);process.exitCode=1});

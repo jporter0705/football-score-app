@@ -9,6 +9,8 @@ export function canonicalFields(input={}){
   const x={...input};for(const [from,to] of Object.entries(aliases)){if(x[to]==null||x[to]==='')if(x[from]!=null)x[to]=x[from];delete x[from];}
   for(const key of ['risk','toWin','line','odds','legNumber'])if(x[key]!=null&&x[key]!==''){const n=Number(clean(x[key]).replace(/[$,]/g,''));if(Number.isFinite(n))x[key]=n;}
   if(x.betId!=null)x.betId=String(x.betId).trim();
+  for(const k of ['awayTeam','homeTeam','gameText','playerTeam','teamName'])if(typeof x[k]==='string')x[k]=TeamMatching.teamName(x[k]);
+  if(['spread','moneyline','ml','team_total'].includes(x.market)&&x.selection)x.selection=TeamMatching.teamName(x.selection);
   if(Array.isArray(x.legs))x.legs=x.legs.map(l=>l&&typeof l==='object'&&!Array.isArray(l)?canonicalFields(l):l);
   return x;
 }
@@ -46,7 +48,7 @@ function normalizeItem(input,parent={},previous={}){
     previous={...previous};
     for(const key of ['sport','league','espnEventId','awayTeam','homeTeam','eventDate','eventStart'])delete previous[key];
   }
-  const x=blend(previous,canonicalFields(input)),raw=clean(x.raw||x.description||x.selection),text=clean([x.description,x.raw,x.rawRow,x.gameText].filter(Boolean).join(' '));
+  const x=canonicalFields(blend(previous,canonicalFields(input))),raw=clean(x.raw||x.description||x.selection),text=clean([x.description,x.raw,x.rawRow,x.gameText].filter(Boolean).join(' '));
   const teamPoints=raw.match(/^Team (?:points|total)\s*-\s*(.+?)\s+(Over|Under)\s+(\d+(?:\.\d+)?)(?:\s*\(Game\))?$/i);
   if(teamPoints){x.market='team_total';x.selection=teamPoints[1].trim();x.side=teamPoints[2].toLowerCase();x.line=Number(teamPoints[3]);}
   if(!x.market||x.market==='unknown'){
@@ -73,7 +75,7 @@ function normalizeItem(input,parent={},previous={}){
   if(x.market==='player_prop'&&x.side==='gte'&&!String(x.propType).endsWith('_gte')&&Number.isFinite(x.line)){x.line-=.5;x.side='over';}
   if(x.market==='total'&&!x.awayTeam){const m=raw.match(/^(?:FOOTBALL\s*-\s*)?\d*\s*(.+?)\/(.+?)\s+(over|under)\s+/i);if(m){x.awayTeam=m[1];x.homeTeam=m[2];x.side=x.side||m[3].toLowerCase();}}
   if(!x.market){const total=raw.match(/Total points\s*-\s*(Over|Under)\s+([\d.]+)/i);if(total){x.market='total';x.selection=total[1].toLowerCase();x.side=x.selection;x.line=Number(total[2]);}}
-  if(x.selection)x.selection=clean(x.selection);return x;
+  if(x.selection)x.selection=['spread','moneyline','ml','team_total'].includes(x.market)?TeamMatching.teamName(clean(x.selection)):clean(x.selection);return x;
 }
 export function normalizeBet(input,scores={},previous={}){
   const incoming=canonicalFields(input);let x=normalizeItem(incoming,{},previous);
@@ -87,3 +89,15 @@ export function normalizeBet(input,scores={},previous={}){
   return Object.fromEntries(Object.entries(x).filter(([,v])=>v!==undefined));
 }
 export function reconcileBets(old=[],incoming=[],scores={}){const existing=new Map(old.map(b=>[String(b.betId),b]));return incoming.map(b=>normalizeBet(b,scores,existing.get(String(b.betId))||{}));}
+
+// Project only proven identity/date repairs. Never migrate financial or grading fields.
+export function repairSavedMetadata(b,scores={}){
+  const keys=['sport','league','espnEventId','awayTeam','homeTeam','selection','gameText','eventDate','playerTeam','teamName'];
+  function needed(item,parent={}){const c=canonicalFields(item);return keys.some(k=>c[k]!==item[k])||!!TeamMatching.correctedEventDay((item.sport||parent.sport)==='NFL'?scores.nfl:scores.college,{...item,sport:item.sport||parent.sport});}
+  const own=needed(b),legNeeds=(b.legs||[]).map(l=>needed(l,b));if(!own&&!legNeeds.some(Boolean))return b;
+  const normalized=normalizeBet(b,scores,b),out={...b};
+  function copy(to,from){for(const k of keys)if(from[k]!==undefined)to[k]=from[k];}
+  if(own)copy(out,normalized);
+  if(legNeeds.some(Boolean))out.legs=b.legs.map((l,i)=>{if(!legNeeds[i])return l;const x={...l};copy(x,normalized.legs[i]);return x;});
+  return out;
+}
