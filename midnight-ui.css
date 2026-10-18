@@ -13,3 +13,8 @@ body{background:#08111d}.app{background:var(--bg)}.tabs{border-radius:12px}.tab{
 @media(max-width:360px){.wager-meta-row{gap:4px}.wager-meta-row .sub{font-size:9px}.wager-meta-row .money{font-size:10px}.exposure strong{font-size:12px}.metric>span{font-size:8px}}
 
 @media(max-width:480px){.metric.positive>b,.metric.negative>b{font-size:clamp(16px,4.8vw,23px)}}
+
+/* Compact approved ticket titles and flowing pick-first matchup lines. */
+.ticket-more{white-space:nowrap;color:#afcee7;font-weight:650}.ticket-title{overflow-wrap:normal}
+.ticket-matchup{display:inline;line-height:1.65}.ticket-matchup .bet-team{display:inline;white-space:normal}.ticket-matchup .bet-team-name{overflow-wrap:normal}.ticket-matchup .logo{display:inline-block;width:20px;height:20px;vertical-align:middle;margin:0 5px 2px 0}.ticket-matchup .matchup-at{margin:0 4px;white-space:nowrap}.ticket-matchup .rank{white-space:nowrap}
+.ticket-shared-matchup{padding:10px 0;font-size:12px;font-weight:650;border-bottom:1px solid var(--border)}.legmain>span{min-width:0}.ticket-total{font-weight:650}.legs .leg>div:first-child{min-width:0}

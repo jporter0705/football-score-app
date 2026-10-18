@@ -24,6 +24,25 @@ function midnightLegTeam(item,g){
   ((sum&&sum.rosters)||[]).forEach(function(group){(group.roster||[]).forEach(function(a){if(playerNameMatches(a.athlete&&a.athlete.displayName,item.player))ids.push(String(group.team&&group.team.id))})});
   matched=candidates.filter(function(c){return ids.includes(String(c.team&&c.team.id))});return matched.length===1?matched[0]:null;
 }
+function midnightFlowMatchup(g,sp){var t=teams(g);return '<span class="ticket-matchup">'+betTeamHtml(t.away,null,sp)+' <span class="matchup-at">at</span> '+betTeamHtml(t.home,null,sp)+'</span>'}
+function midnightTicketTitle(b){
+  var names=[],seen=new Set(),allProps=b.legs.length&&b.legs.every(isPlayerProp);
+  function add(c,fallback,sp){var t=c&&c.team||{},full=t.displayName||fallback;if(!full)return;var key=sp+':'+TeamMatching.key(full,sp);if(seen.has(key))return;seen.add(key);names.push(displayTeamName(sp==='NFL'?(t.name||t.shortDisplayName||full):(t.shortDisplayName||t.location||full)));}
+  b.legs.forEach(function(l){var item=Object.assign({sport:b.sport},l),g=legGame(l,b),picked=midnightLegTeam(item,g);if(picked)add(picked,null,item.sport);else if(!isPlayerProp(item)&&['spread','moneyline','ml','team_total'].includes(item.market)&&item.selection)add(null,item.selection,item.sport);else if(g){var t=teams(g);add(t.away,null,item.sport);add(t.home,null,item.sport);}else{var pair=TeamMatching.pair(item);if(pair)pair.forEach(function(n){add(null,n,item.sport)});}});
+  var shown=names.slice(0,3);while(shown.length>1&&shown.join(', ').length>50)shown.pop();var more=names.length-shown.length,kind=/teaser/i.test(b.structure||b.type||'')?'Teaser':'Parlay';
+  return '<span class="ticket-title">'+kind+(shown.length?' · '+shown.map(esc).join(', ')+(allProps?' props':''):'')+(more?' <span class="ticket-more" aria-label="'+more+' more teams">+'+more+' more</span>':'')+'</span>';
+}
+function midnightLegMatchup(item,g){
+  if(!g||isPlayerProp(item))return '';var t=teams(g),picked=midnightLegTeam(item,g),sp=item.sport;
+  if(picked){var away=picked===t.away,other=away?t.home:t.away,tm=picked.team||{},full=tm.displayName||tm.shortDisplayName||item.selection,suffix='';
+    if(item.market==='spread'&&item.line!=null)suffix=Number(item.line)===0?' PK':' '+(Number(item.line)>0?'+':'')+item.line;
+    else if(item.market==='moneyline'||item.market==='ml')suffix=' ML';
+    else if(item.market==='team_total')suffix=' — Team total '+(item.side||'')+' '+item.line;
+    return '<span class="ticket-matchup">'+betTeamHtml(picked,full+suffix,sp)+' <span class="matchup-at">'+(away?'at':'vs')+'</span> '+betTeamHtml(other,null,sp)+'</span>';
+  }
+  if(item.market==='total')return midnightFlowMatchup(g,sp)+' <span class="ticket-total">· '+esc(item.side||item.selection||'Total')+' '+esc(item.line)+'</span>';
+  return '';
+}
 function midnightLegProgress(item,g){
   if(item.matchIssue)return item.matchIssue;
   if(!g)return 'Game not matched';
@@ -49,17 +68,18 @@ function midnightLegProgress(item,g){
 }
 legHtml=function(l,b){var item=teamPointsItem(Object.assign({sport:b.sport},l)),g=legGame(l,b),st=legDisplayStatus(l,b),closed=['won','lost','push'].includes(st),team=midnightLegTeam(item,g),label={won:'Won',lost:'Lost',push:'Push',live:'Live',pending:'Upcoming',unavailable:'Review'}[st]||'Upcoming';
   var requirement=isPlayerProp(item)?propRequirement(item):item.market==='team_total'?item.selection+' — Team total '+item.side+' '+item.line:legRequirement(item);
-  if(!fullGameScope(item)){var scope=trackedPeriod(item);if(scope&&scope.label)requirement+=' · '+scope.label;}
+  var scopeLabel='';if(!fullGameScope(item)){var scope=trackedPeriod(item);if(scope&&scope.label){scopeLabel=' · '+scope.label;requirement+=scopeLabel;}}
   var logo=team&&team.team&&team.team.logo?'<img class="logo" alt="'+esc(team.team.displayName||'Team')+'" src="'+esc(team.team.logo)+'">':'';
-  return '<div class="leg"><div><div class="legmain">'+logo+'<span>'+esc(requirement)+'</span></div><div class="grading-evidence leg-progress">'+esc(midnightLegProgress(item,g))+'</div></div><div class="status-pack"><span class="legstatus '+st+'">'+label+'</span>'+(!closed?wagerBars(item,g):'')+'</div></div>';
+  var matchup=midnightLegMatchup(item,g),primary=matchup?'<span>'+matchup+esc(scopeLabel)+'</span>':logo+'<span>'+esc(requirement)+'</span>';
+  return '<div class="leg"><div><div class="legmain">'+primary+'</div><div class="grading-evidence leg-progress">'+esc(midnightLegProgress(item,g))+'</div></div><div class="status-pack"><span class="legstatus '+st+'">'+label+'</span>'+(!closed?wagerBars(item,g):'')+'</div></div>';
 };
 betCard=function(b){var g=findGame(b),hasLegs=(b.legs||[]).length,closed=authoritativeResult(b)||parlayAutoResult(b)||result(b,g),id='m'+String(b.betId).replace(/[^a-zA-Z0-9]/g,''),legsId='l'+String(b.betId).replace(/[^a-zA-Z0-9]/g,'');
   var linked=hasLegs?sortedLegs(b).map(function(l){return l.matchIssue?null:legGame(l,b)}).filter(Boolean):[],common=linked.length===hasLegs&&linked.length&&linked.every(function(x){return String(x.id)===String(linked[0].id)})?linked[0]:null;
   if(hasLegs)g=common;
-  var title=hasLegs?(g?midnightMatchup(g,b.sport):esc(displayBetType(b))):compactBetLine(b,g,b.sport),prop=isPlayerProp(b)&&!hasLegs;
+  var title=hasLegs?midnightTicketTitle(b):compactBetLine(b,g,b.sport),prop=isPlayerProp(b)&&!hasLegs;
   var pick=prop?'<div class="pick">'+esc(propRequirement(b))+'</div>':'';
   var evidence=!hasLegs&&(closed||finalGame(g)||prop||!fullGameScope(b))?'<div class="grading-evidence">'+esc(gradingEvidence(b,g))+'</div>':'';
-  var html='<div class="card '+(betState(b,g)==='live'?'live':'')+'" data-gameid="'+esc(g&&g.id||betGameId(b))+'"><div class="top"><div><b>'+title+'</b></div><div class="status-pack"><button class="status-button" aria-label="Change wager status" onclick="toggleM(\''+id+'\')">'+pill(b,g)+'</button>'+(!closed?wagerBars(b,g):'')+'</div></div>'+pick+'<div class="wager-meta-row"><span class="sub">'+esc(b.sport||'Other')+' · '+esc(displayBetType(b))+'</span><span class="money">'+resultsMoney(Number(b.risk||0))+' risk → '+resultsMoney(Number(b.toWin||0))+' to win</span></div>'+(hasLegs&&!g?'':midnightGameDetails(g,b.sport))+evidence+(hasLegs?'<button class="expand" aria-controls="'+legsId+'" onclick="toggleLegs(\''+legsId+'\')">'+hasLegs+' legs</button><div class="legs" id="'+legsId+'">'+sortedLegs(b).map(function(l){return legHtml(l,b)}).join('')+'</div>':'')+'<div class="manual" id="'+id+'">'+['won','lost','push','auto'].map(function(s){return '<button onclick="setOv(\''+esc(b.betId)+'\',\''+s+'\')">'+s.charAt(0).toUpperCase()+s.slice(1)+'</button>'}).join('')+'</div></div>';
+  var html='<div class="card '+(betState(b,g)==='live'?'live':'')+'" data-gameid="'+esc(g&&g.id||betGameId(b))+'"><div class="top"><div><b>'+title+'</b></div><div class="status-pack"><button class="status-button" aria-label="Change wager status" onclick="toggleM(\''+id+'\')">'+pill(b,g)+'</button>'+(!closed?wagerBars(b,g):'')+'</div></div>'+pick+'<div class="wager-meta-row"><span class="sub">'+esc(b.sport||'Other')+' · '+esc(displayBetType(b))+'</span><span class="money">'+resultsMoney(Number(b.risk||0))+' risk → '+resultsMoney(Number(b.toWin||0))+' to win</span></div>'+(hasLegs&&!g?'':midnightGameDetails(g,b.sport))+evidence+(hasLegs?'<button class="expand" aria-controls="'+legsId+'" onclick="toggleLegs(\''+legsId+'\')">'+hasLegs+' legs</button><div class="legs" id="'+legsId+'">'+(g?'<div class="ticket-shared-matchup">'+midnightFlowMatchup(g,b.sport)+'</div>':'')+sortedLegs(b).map(function(l){return legHtml(l,b)}).join('')+'</div>':'')+'<div class="manual" id="'+id+'">'+['won','lost','push','auto'].map(function(s){return '<button onclick="setOv(\''+esc(b.betId)+'\',\''+s+'\')">'+s.charAt(0).toUpperCase()+s.slice(1)+'</button>'}).join('')+'</div></div>';
   if(!canManualGrade(b,g))html=html.replace(/<button class="status-button"[^>]*>([\s\S]*?)<\/button>/,'<span>$1</span>').replace(/<div class="manual"[\s\S]*?<\/div>/,'');
   return html;
 };

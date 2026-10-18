@@ -1,0 +1,27 @@
+const assert=require('node:assert/strict'),{ctx}=require('./test-support-browser.cjs')();
+ctx.selectedWeek={start:'2026-10-13',end:'2026-10-19'};
+const team=(id,city,name)=>({id,displayName:city+' '+name,shortDisplayName:name,location:city,name,logo:id+'.png'});
+function game(id,away,home){return {id,date:'2026-10-18T17:00:00Z',uid:'s:20~l:28~e:'+id,competitions:[{status:{type:{state:'pre'}},competitors:[{homeAway:'away',team:away},{homeAway:'home',team:home}]}]};}
+const ravens=team('bal','Baltimore','Ravens'),browns=team('cle','Cleveland','Browns'),giants=team('nyg','New York','Giants'),eagles=team('phi','Philadelphia','Eagles'),bills=team('buf','Buffalo','Bills'),dolphins=team('mia','Miami','Dolphins'),bears=team('chi','Chicago','Bears'),packers=team('gb','Green Bay','Packers');
+const games=[game('101',ravens,browns),game('102',eagles,giants),game('103',bills,dolphins),game('104',bears,packers)];ctx.S.nfl=games;
+const legs=[{sport:'NFL',espnEventId:'101',market:'spread',selection:'Baltimore Ravens',line:-2.5},{sport:'NFL',espnEventId:'102',market:'spread',selection:'New York Giants',line:0},{sport:'NFL',espnEventId:'103',market:'spread',selection:'Buffalo Bills',line:-2.5}];
+const b={betId:'title-1',sport:'NFL',structure:'parlay',risk:20,toWin:81.4,legs};
+let title=ctx.midnightTicketTitle(b);assert.match(title,/Parlay · Ravens, Giants, Bills/);assert.doesNotMatch(title,/2\.5|PK/);
+assert.match(ctx.midnightTicketTitle({...b,structure:'teaser'}),/Teaser · Ravens, Giants, Bills/);
+let html=ctx.legHtml(legs[0],b);assert.match(html,/Baltimore Ravens -2\.5/);assert.match(html,/>at<\/span>/);assert.match(html,/Cleveland Browns/);assert.match(html,/bal\.png/);assert.match(html,/cle\.png/);assert.doesNotMatch(html,/pm-requirement|score-inset|game-footer/);
+html=ctx.legHtml(legs[1],b);assert.match(html,/New York Giants PK/);assert.match(html,/>vs<\/span>/);assert.match(html,/Philadelphia Eagles/);assert(html.indexOf('New York Giants PK')<html.indexOf('Philadelphia Eagles'));
+const prop={sport:'NFL',espnEventId:'104',market:'player_prop',player:'Caleb Williams',propType:'passing_tds_gte',line:2};
+ctx.S.summaries['NFL:104']={rosters:[{team:{id:'chi'},roster:[{athlete:{displayName:'Caleb Williams'}}]}]};
+const props={...b,structure:'same_game_parlay',espnEventId:'104',legs:[prop,{...prop,propType:'passing_yards',line:249.5,side:'over'}]};
+assert.match(ctx.midnightTicketTitle(props),/Parlay · Bears props/);assert.doesNotMatch(ctx.midnightTicketTitle(props),/Bears, Bears/);
+html=ctx.betCard(props);assert.equal((html.match(/ticket-shared-matchup/g)||[]).length,1);assert.match(html,/Chicago Bears/);assert.match(html,/Green Bay Packers/);assert.equal((html.match(/Caleb Williams/g)||[]).length,2);assert.equal((html.match(/src="chi.png"/g)||[]).length,3,'one shared Bears logo and one per verified player leg');assert.doesNotMatch(html,/no ESPN match/);
+assert.equal(ctx.midnightLegTeam({...prop,player:'Unknown Player'},games[3]),null,'unknown player team cannot be invented');
+const ten={...b,legs:Array.from({length:10},(_,i)=>({sport:'NFL',market:'spread',selection:'Team '+String.fromCharCode(65+i),line:i}))};
+title=ctx.midnightTicketTitle(ten);assert.match(title,/Parlay · Team A, Team B, Team C/);assert.match(title,/\+7 more/);assert.doesNotMatch(title,/Team D/);assert.equal(ten.legs.length,10);
+assert.doesNotMatch(ctx.midnightTicketTitle({...b,legs:[legs[0],legs[0],legs[0]]}),/more|Ravens, Ravens/,'repeated team appears once');
+assert.match(ctx.midnightTicketTitle({...b,legs:[{sport:'NFL',market:'spread',selection:'<script>bad</script>',line:1}]}),/&lt;script&gt;/);
+assert.equal(ctx.midnightLegMatchup({...legs[0],selection:'Unknown'},games[0]),'','never assume an unmatched selection is home');
+assert.match(ctx.midnightLegMatchup({...legs[0],market:'moneyline'},games[0]),/Ravens ML/);
+assert.match(ctx.midnightLegMatchup({...legs[0],market:'team_total',side:'over',line:20.5},games[0]),/Team total over 20.5/);
+const before=JSON.stringify(b);ctx.betCard(b);assert.equal(JSON.stringify(b),before,'display does not alter bet identity, amounts, selection or grading');
+console.log('PASS approved ticket design: team-only titles, distinct-team cap, home/away pick order, both logos, PK/ML/total scope, verified props and one flowing shared matchup');
