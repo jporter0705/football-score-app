@@ -3,6 +3,7 @@ import { authorized, sameOrigin, betStore, equal } from './_private.mjs';
 import { validWeek, listWeeks, readWeek, bettingWeek, json } from './_archive.mjs';
 import { updatePrivateBets } from './_bet-backups.mjs';
 import { makePlan, stable } from './_csv-plan.mjs';
+import { hydrateImportScores } from './_import-scores.mjs';
 
 export async function loadWeeks(choices={}) {
   const store = betStore(), keys = new Set(await listWeeks());
@@ -39,6 +40,8 @@ export default async request => {
     let weeks=await loadWeeks(choices),plan=makePlan(body.csv,weeks,choices,body.matches);
     const missing=[...new Set(plan.items.map(i=>i.week).filter(w=>w&&!weeks.some(x=>x.week===w)))];
     if(missing.length){weeks=await loadWeeks({...choices,...Object.fromEntries(missing.map((w,i)=>['extra'+i,w]))});plan=makePlan(body.csv,weeks,choices,body.matches);}
+    await hydrateImportScores(weeks,plan);
+    plan=makePlan(body.csv,weeks,choices,body.matches);
     const token=tokenFor(plan,weeks);
     if(body.action === 'preview') return json({...plan,token,weeks:weeks.map(w=>w.week)});
     if(!equal(body.token,token)) return json({error:'Saved bets or game information changed. Preview again before saving.',repreview:true},409);

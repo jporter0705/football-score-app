@@ -24,6 +24,23 @@ function recoverTeamTotal(row) {
   if(!m||![m[1],m[2]].some(t=>t.trim().toLowerCase()===m[3].trim().toLowerCase()))return null;
   return {...row,market:'team_total',selection:m[3].trim(),side:m[4].toLowerCase(),line:m[5],game_text:m[1]+' at '+m[2],extraction_error:''};
 }
+function recoverSavedDescription(row,b,prior){
+  if(!prior||!/^Straight bet description missing;\s*$/.test(row.extraction_error||'')||row.description||b.legs?.length)return false;
+  const description=String(row.expanded_text||'').match(/^Description:\s*([^\r\n]+)(?:\r?\n|$)/)?.[1]?.trim();
+  const pair=description&&TeamMatching.pair({description}),oldPair=TeamMatching.pair(prior),sp=TeamMatching.sport(prior.sport||prior.league);
+  if(!pair||!oldPair||!sp||!prior.espnEventId||!prior.eventDate||b.acceptedDate!==prior.acceptedDate||b.risk!==prior.risk)return false;
+  const same=(a,c)=>TeamMatching.key(a,sp)===TeamMatching.key(c,sp);
+  if(!((same(pair[0],oldPair[0])&&same(pair[1],oldPair[1]))||(same(pair[0],oldPair[1])&&same(pair[1],oldPair[0]))))return false;
+  // This recovery recognizes only complete spread descriptions. It is not a
+  // general waiver for exporter warnings or conflicting source requirements.
+  const terms=description.match(/ - (?:Side|Spread)(?: \[([^\]]+)\])? - (.+?) ([+-]?\d+(?:\.\d+)?)$/i);
+  const periods={'1st quarter':'first_quarter','2nd quarter':'second_quarter','3rd quarter':'third_quarter','4th quarter':'fourth_quarter','1st half':'first_half','2nd half':'second_half'};
+  const period=terms?.[1]?periods[terms[1].toLowerCase()]:'game';
+  if(!terms||!period||b.market!=='spread'||b.market!==prior.market||!same(b.selection,prior.selection)||!same(terms[2],b.selection)||Number(terms[3])!==b.line||period!==b.period)return false;
+  for(const k of ['line','side','period','odds'])if(b[k]!==undefined&&b[k]!==prior[k])return false;
+  if(b.eventDate&&b.eventDate!==prior.eventDate||b.sport&&TeamMatching.sport(b.sport)!==sp)return false;
+  b.description=description;b.gameText=pair.join(' vs ');return true;
+}
 function parse(row) {
   if (!/^[\w-]{1,80}$/.test(row.bet_id || '')) throw Error('Missing or invalid Bet ID');
   const status = String(row.status || '').toUpperCase();
@@ -101,7 +118,9 @@ export function makePlan(csv, weeks, choices = {}, matches = {}) {
       const input=recovered||row;
       const b = parse(input), priorMatches = existing.get(b.betId) || [];
       if (priorMatches.length > 1) throw Error('This Bet ID is already saved in multiple weeks; resolve it before importing');
-      if (input.extraction_error) throw Error('Exporter warning: '+input.extraction_error);
+      const reusedDescription=recoverSavedDescription(input,b,priorMatches[0]?.bet);
+      if (input.extraction_error&&!reusedDescription) throw Error('Exporter warning: '+input.extraction_error);
+      if(reusedDescription)item.notice='Incomplete exporter description verified against the same saved Bet ID and wager terms; saved game details retained.';
       if(recovered)item.notice='Team total recovered from the complete wager description.';
       const prior = priorMatches[0], destination = prior ? {week:prior.week} : chooseWeek(b,weeks,Object.hasOwn(choices,b.betId)?choices[b.betId]:null);
       Object.assign(item,destination,{existing:!!prior,risk:b.risk,status:b.betOnlineStatus});

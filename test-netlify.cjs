@@ -84,7 +84,10 @@ const request=(route,method='GET',body,headers={})=>new Request('https://example
   console.log('PASS unanimous leg classification, NFL filter records, mixed/unknown guards, immutable archive repair and future chat imports');
 
   const before=fetchCount;await refresh(request('refresh?week='+key,'POST'));assert.equal(fetchCount-before,14);
-  const now=fetchCount;await live(request('live?week='+key,'POST'));assert.equal(fetchCount-now,0,'fresh date cache avoids duplicate live requests');
+  // On Tuesday the live endpoint also checks Monday in the previous week;
+  // the full current-week refresh cannot have populated that date's cache.
+  const pacificToday=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const now=fetchCount;await live(request('live?week='+key,'POST'));assert.equal(fetchCount-now,pacificToday===key?2:0,'fresh in-week dates avoid duplicate live requests; Tuesday may check prior Monday');
   const stored=await api.readWeek(key);assert.equal(stored.nfl.length,2);
   const scoreEntry=memory.get('football-score-history/week/'+key);scoreEntry.data.scoreDays={};
   failESPN=true;await live(request('live?week='+key,'POST'));const failed=await api.readWeek(key);assert.equal(failed.nfl.length,2);assert.equal(failed.sources.nfl.updatedAt,stored.sources.nfl.updatedAt);assert.match(failed.sources.nfl.error,/offline/);

@@ -6,6 +6,7 @@ var TeamMatching=(function(){
     ['appalachian state','app state','appalachian state university'],
     ['old dominion','odu','old dominion university'],
     ['massachusetts','umass'],['connecticut','uconn'],['mississippi','ole miss'],
+    ['miami','miami florida','miami fl','miami (fl)'],
     ['southern mississippi','southern miss'],['florida international','fiu'],
     ['florida atlantic','fau'],['texas san antonio','utsa','texas at san antonio'],
     ['texas el paso','utep','texas at el paso'],['southern methodist','smu'],
